@@ -14,9 +14,9 @@ pip -r requirements.txt
 ## Main functions
 
 - `decompose_gate`: any two-qubit gate decomposition (a high-level interface)
-- `cnot_decompose`: decompose an arbitrary two-qubit gate into several single-qubit gates and at most three CNOT gates (based on KAK decomposition)
-- `abc_decompose`: for controlled-U gate decomposition
-- `tensor_product_decompose`: when a two-qubit gate is in form of tensor product of two single-qubit gate
+- `cnot_decomp`: decompose an arbitrary two-qubit gate into several single-qubit gates and at most three CNOT gates (based on KAK decomposition)
+- `abc_decomp`: for controlled-U gate decomposition
+- `tensor_product_decomp`: when a two-qubit gate is in form of tensor product of two single-qubit gate
 
 ## How to use
 
