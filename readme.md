@@ -5,7 +5,7 @@
 >Author: Zhaohui Yang
 
 ## Necessary dependencies
-- numpy, scipy: for linear algbra  calculation
+- numpy, scipy: for linear algebra  calculation
 - matplotlib, qiskit: for `circuit` visualization
 
 ## Main functions
