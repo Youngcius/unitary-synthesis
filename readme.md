@@ -1,15 +1,12 @@
 # Two-Qubit Gate Decomposition
 
->Date: 2011-11-17
+>Date: 2011-11-27
 >
 >Author: Zhaohui Yang
 
 ## Necessary dependencies
 - numpy, scipy: for linear algbra  calculation
 - matplotlib, qiskit: for `circuit` visualization
-```python
-pip -r requirements.txt
-```
 
 ## Main functions
 
