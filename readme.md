@@ -49,11 +49,15 @@
   $$
   where the U3 operator is in form of
   $$
-  \begin{align}\begin{aligned}\newcommand{\th}{\frac{\theta}{2}}\\\begin{split}U3(\theta, \phi, \lambda) =e^{i\frac{\phi+\lambda}{2}}R_z(\phi)R_y(\theta)R_z(\lambda) = 
+  \begin{align}
+  U3(\theta, \phi, \lambda) = e^{i\frac{\phi+\lambda}{2}}R_z(\phi)R_y(\theta)R_z(\lambda)
+  = 
       \begin{pmatrix}
           \cos(\th)          & -e^{i\lambda}\sin(\th) \\
           e^{i\phi}\sin(\th) & e^{i(\phi+\lambda)}\cos(\th)
-      \end{pmatrix}\end{split}\end{aligned}\end{align}
+          \end{pmatrix}
+      
+  \end{align}
   $$
   
 - `params_abc`: ABC decomposition of 2*2 unitary operator, based on the ZYZ decomposition algorithm
