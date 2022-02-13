@@ -50,11 +50,12 @@
   where the U3 operator is in form of
   $$
   \begin{align}
+  
   U3(\theta, \phi, \lambda) = e^{i\frac{\phi+\lambda}{2}}R_z(\phi)R_y(\theta)R_z(\lambda)
   = 
       \begin{pmatrix}
-          \cos(\th)          & -e^{i\lambda}\sin(\th) \\
-          e^{i\phi}\sin(\th) & e^{i(\phi+\lambda)}\cos(\th)
+          \cos(\frac{\theta}{2})          & -e^{i\lambda}\sin(\frac{\theta}{2}) \\
+          e^{i\phi}\sin(\frac{\theta}{2}) & e^{i(\phi+\lambda)}\cos(\frac{\theta}{2})
           \end{pmatrix}
       
   \end{align}
