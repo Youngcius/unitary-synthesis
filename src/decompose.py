@@ -68,7 +68,7 @@ def params_abc(U):
     return alpha, A, B, C
 
 
-def abc_decomp(U, cq=0, return_u3=False):
+def abc_decomp(U, cq=0, return_u3=False) -> List[Gate]:
     """
     Decompose two-qubit controlled gate based on ABC decomposition
     """
@@ -109,7 +109,7 @@ def abc_decomp(U, cq=0, return_u3=False):
     B = gate.Ry(-theta / 2).data @ gate.Rz(-(phi + lam) / 2).data
     C = gate.Rz((lam - phi) / 2).data
     if return_u3:
-        # regardless global phases
+        # regardless of global phases
         return optimize_circuit([
             gate.Rz((lam - phi) / 2, tq),  # C
             gate.CX if cq == 0 else gate.CX.perm(),
@@ -167,7 +167,7 @@ def is_tensor_prod(U):
 
 def tensor_prod_decomp(U, return_u3=False) -> List[Gate]:
     """
-    Based on Strict KPD
+    Tensor product decomposition based on Strict KPD algorithm
     """
     A, B = kron_decomp(U)
 
@@ -230,7 +230,7 @@ def simult_svd(A: np.ndarray, B: np.ndarray):
         # D =
         # return U, V,Da,Db
         # TODO: complete this block if necessary
-        raise ValueError('Not implemented yet for the situation that A is not full-rank')
+        raise NotImplementedError('Not implemented yet for the situation that A is not full-rank')
 
 
 def is_so4(U):
@@ -255,7 +255,7 @@ def so4_to_magic_su2s(U: np.ndarray):
         raise ValueError('Input matrix is not in SO(4)')
 
 
-def cnot_decomp(U: np.ndarray, return_u3=False):
+def cnot_decomp(U: np.ndarray, return_u3=False) -> List[Gate]:
     """
     KAK decomposition (CNOT basis) of two-qubit gate.
     ---

@@ -7,7 +7,7 @@ from functools import reduce
 from utils import tensor_1_slot, is_equiv_unitary
 import matplotlib.pyplot as plt
 from gate import Gate
-from typing import List
+from typing import List, Tuple
 from copy import deepcopy
 import datetime
 import io
@@ -83,9 +83,9 @@ def limit_angle(a):
             return 2 * np.pi - r
 
 
-def parse_to_tuples(circuit: List[Gate]):
+def parse_to_tuples(circuit: List[Gate]) -> List[Tuple[str, List[int]]]:
     """
-
+    Parse each Gate instance into a tuple consisting gate name and quantum register indices of a list
     :param circuit:
     :return: [('u3', [0]), ..., ('cu3', [0, 1])]
     """
@@ -116,7 +116,7 @@ def num_qregs_of_circuit(circuit: List[Gate]):
     return max(idx) + 1
 
 
-def to_qasm(circuit: List[Gate], fname=None):
+def to_qasm(circuit: List[Gate], fname=None) -> str:
     circuit = deepcopy(circuit)
     output = QASMStringIO()
     output.write_header()
@@ -175,7 +175,7 @@ def circuit_to_unitary(circuit: List[Gate]):
     return reduce(np.dot, reversed(ops))
 
 
-def optimize_circuit(circuit: List[Gate]):
+def optimize_circuit(circuit: List[Gate]) -> List[Gate]:
     """
     Delete redundant identity gates
     """

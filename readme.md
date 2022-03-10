@@ -1,12 +1,10 @@
 # Two-Qubit Gate Decomposition & Reck Decomposition
 
 >Date: 2011-11-27
->
->Author: Zhaohui Yang
 
 ## Necessary dependencies
 - numpy, scipy: for linear algebra calculation
-- matplotlib, qiskit: for `circuit` visualization
+- matplotlib, qiskit: for circuit object visualization
 
 ## Main functions
 
@@ -22,7 +20,7 @@
   ---B1------------------A1---
   ```
 
-  Step 2: calculate parameterized gates $e^{iH}$ with three CNOT gates
+  Step 2: calculate parameterized gates $e^{-iH}$ with three CNOT gates
 
   ```txt
   ---B0---@---U0---@---V0---@---W--------A0---
@@ -44,20 +42,21 @@
   $$
   
 - `params_u3`: Obtain the global phase "p" appended to the standard U3 operator
+  
   $$
   U = e^{i p} U3(\theta, \phi, \lambda)
   $$
+  
   where the U3 operator is in form of
+  
   $$
   \begin{align}
-  
   U3(\theta, \phi, \lambda) = e^{i\frac{\phi+\lambda}{2}}R_z(\phi)R_y(\theta)R_z(\lambda)
   = 
       \begin{pmatrix}
           \cos(\frac{\theta}{2})          & -e^{i\lambda}\sin(\frac{\theta}{2}) \\
           e^{i\phi}\sin(\frac{\theta}{2}) & e^{i(\phi+\lambda)}\cos(\frac{\theta}{2})
           \end{pmatrix}
-      
   \end{align}
   $$
   
