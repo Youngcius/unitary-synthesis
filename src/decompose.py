@@ -362,7 +362,6 @@ def kron_factor_4x4_to_2x2s(mat: np.ndarray):
     :return: A scalar factor and a pair of 2x2 unit-determinant matrices.
             The kronecker product of all three is equal to the given matrix.
     """
-
     # Use the entry with the largest magnitude as a reference point
     a, b = max(((i, j) for i in range(4)
                 for j in range(4)), key=lambda t: abs(mat[t]))

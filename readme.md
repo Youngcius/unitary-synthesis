@@ -2,7 +2,7 @@
 
 >Date: 2011-11-27
 
-## Necessary dependencies
+## Dependencies
 - numpy, scipy: for linear algebra calculation
 - matplotlib, qiskit: for circuit object visualization
 
@@ -12,7 +12,7 @@
 
 - `cnot_decomp`: decompose an arbitrary two-qubit gate into several single-qubit gates and at most three CNOT gates (based on KAK decomposition)
 
-  Step 1: decompose into $ \left( A_0 \otimes A_1 \right) e^{-iH}\left( B_0 \otimes B_1 \right)$
+  Step 1: decompose an arbitrary two-qubit gate into $ \left( A_0 \otimes A_1 \right) e^{-iH}\left( B_0 \otimes B_1 \right)$
 
   ```txt
   ---B0------------------A0---
@@ -30,7 +30,7 @@
 
 - `abc_decomp`: for controlled-U gate decomposition
 
-- `tensor_product_decomp`: when a two-qubit gate is in form of tensor product of two single-qubit gate
+- `tensor_product_decomp`: when a two-qubit gate is in form of tensor product of two single-qubit gates
 
 - `reck_decomp`: decompose an arbitrary U(N) operator into $\frac{N(N-1)}{2}$ U(2) operators *(currently only supports real unitary matrix)*
 
@@ -60,7 +60,8 @@
   \end{align}
   $$
   
-- `params_abc`: ABC decomposition of 2*2 unitary operator, based on the ZYZ decomposition algorithm
+- `params_abc`: ABC decomposition of 2*2 unitary operator, based on ZYZ decomposition 
+
   $$
   \begin{align}
   U &= e^{i\alpha} R_z(\phi) R_y(\theta) R_z(\lambda)\\

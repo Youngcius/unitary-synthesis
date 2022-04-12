@@ -154,5 +154,3 @@ def CRy(theta: float, tq=1, cq=0) -> Gate:
 def CRz(theta: float, tq=1, cq=0) -> Gate:
     data = linalg.expm(-1j * theta / 2 * Z.data)
     return Gate(data, tq, cq, name='Rz', angle=theta)
-
-# TODO: angle要不要归一化

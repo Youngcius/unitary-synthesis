@@ -72,9 +72,29 @@ def tensor_1_slot(U, n: int, tq: int):
     return reduce(np.kron, ops)
 
 
+def tensor_2_slot(U, n: int, cq: int, tq: int):
+    """
+    Given a two-qubit gate, compute the tensor unitary matrix expanded
+    to the whole Hilbert space (totally n qubits) of a two-qubit gate.
+    """
+    if cq not in range(n) or tq not in range(n):
+        raise ValueError('the qubit idx is out of range')
+    arr_list = [np.identity(2)] * (n - 1)
+    arr_list[0] = U
+    res = reduce(np.kron, arr_list).reshape([2] * 2 * n)
+    idx = np.repeat(-1, n)
+    idx[cq] = 0
+    idx[tq] = 1
+    idx[idx < 0] = range(2, n)
+    idx = idx.tolist()
+    idx_latter = [i + n for i in idx]
+    res = np.transpose(res, idx + idx_latter).reshape([2 ** n, 2 ** n])
+    return res
+
+
 def times_two_matrix(U, V):
     """
-    Claculate the coefficient a, s.t. U = a V
+    Calculate the coefficient a, s.t. U = a V
     """
     assert U.shape == V.shape, "input matrices should have the same dimension"
     idx1 = np.flatnonzero(U.round(6))  # cut to some precision
