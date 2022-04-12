@@ -88,3 +88,5 @@ See the `examples.ipynb` file.
 [5] Vatan, F. and C. Williams (2004). "Optimal quantum circuits for general two-qubit gates." Physical Review A 69(3).
 
 [6] Berman, A. and R. J. Plemmons (1994). Nonnegative matrices in the mathematical sciences, SIAM.
+
+[7] Reck, M., et al. (1994). "Experimental realization of any discrete unitary operator." Physical Review Letters **73**(1): 58-61.

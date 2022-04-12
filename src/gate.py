@@ -21,7 +21,8 @@ class Gate:
         """
         self.tq = tq
         self.cq = cq
-        self.qregs = [self.tq] if self.cq is None else [self.cq, self.tq]  # cq在前，tq在后
+        # if it is a two/multi-qubit gate, the first index is cq, later index/indices is/are tq
+        self.qregs = [self.tq] if self.cq is None else [self.cq, self.tq]
         self.data = data.astype(complex)
         self.name = name
         if 'angle' in kwargs.keys():
@@ -32,12 +33,27 @@ class Gate:
     def inverse(self):
         """
         Inverse, i.e. conjugate transpose, of the origin gate, only
+        :return: a new Gate instance
         """
-        pass
+        if self.cq is None:
+            t_names = ('T', 'TDG')
+            s_names = ('S', 'SDG')
+            g = deepcopy(self)
+            g.data = self.data.conj().T
+            if g.name in t_names:
+                idx = t_names.index(g.name)
+                g.name = t_names[(idx + 1) % 2]
+            elif g.name in s_names:
+                idx = s_names.index(g.name)
+                g.name = s_names[(idx + 1) % 2]
+            return g
+        else:
+            raise NotImplementedError('not implementted for controlled gate')
 
     def perm(self):
         """
         Permutation of tq and cq indices, only support fixed controlled gate
+        :return: a new Gate instance
         """
         if self.cq is None:
             raise ValueError('only support controlled gate')
@@ -74,6 +90,7 @@ class Gate:
         For single-qubit gate and controlled-rotation gate
         :param tq: target qubit
         :param cq: control qubit
+        :return: a new Gate instance
         """
         u = deepcopy(self)
         u.tq = tq
@@ -84,7 +101,7 @@ class Gate:
 
 
 # Fixed gates: Executable quantum gates without parameters (1-qubit & 2-qubit gates)
-fixed_gates = ['x', 'y', 'z', 'i', 'h', 's', 't', 'cx', 'cz', 'swap', 'ch']
+fixed_gates = ['x', 'y', 'z', 'i', 'h', 's', 't', 'sdg', 'tdg', 'cx', 'cz', 'swap', 'ch']
 
 I = Gate(np.identity(2), name='I')
 X = Gate(np.array([[0. + 0.j, 1. + 0.j],
