@@ -73,7 +73,7 @@
 
 ## How to use
 
-See the `examples.ipynb` file.
+See the [examples.ipynb](./src/examples.ipynb) file.
 
 ## Reference
 

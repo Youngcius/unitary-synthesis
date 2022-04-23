@@ -1,11 +1,13 @@
 """
 Functions for Gate decomposition and matrix decomposition
 """
-from utils import *
-from math import sqrt, pi, atan2
+import numpy as np
+
 import gate
+from utils import *
 from gate import Gate
 from typing import List
+from math import sqrt, pi, atan2
 from circuit import optimize_circuit
 
 M = np.array([[1, 0, 0, 1j],
@@ -21,7 +23,7 @@ A = np.array([[1, 1, -1, 1],
               [1, -1, 1, 1]])
 
 
-def params_zyz(U):
+def params_zyz(U: np.ndarray):
     """
     ZYZ decomposition of 2*2 unitary operator
     :math:`U = e^{i\alpha} R_z(\phi) R_y(\theta) R_z(\lambda)`
@@ -41,7 +43,7 @@ def params_zyz(U):
     return alpha, theta, phi, lam
 
 
-def params_u3(U, return_phase=False):
+def params_u3(U: np.ndarray, return_phase=False):
     """
     Obtain the global phase "p" appended to the standard U3 operator
     :math:`U = exp(i p) U3(\theta, \phi, \lambda)`
@@ -54,7 +56,7 @@ def params_u3(U, return_phase=False):
         return theta, phi, lam
 
 
-def params_abc(U):
+def params_abc(U: np.ndarray):
     """
     ABC decomposition of 2*2 unitary operator
     :return: a series
@@ -68,7 +70,7 @@ def params_abc(U):
     return alpha, A, B, C
 
 
-def abc_decomp(U, cq=0, return_u3=False) -> List[Gate]:
+def abc_decomp(U: np.ndarray, cq=0, return_u3=False) -> List[Gate]:
     """
     Decompose two-qubit controlled gate based on ABC decomposition
     """
@@ -129,7 +131,7 @@ def abc_decomp(U, cq=0, return_u3=False) -> List[Gate]:
         ])
 
 
-def kron_decomp(M):
+def kron_decomp(M: np.ndarray):
     """
     Kronecker product decomposition (KPD) algorithm (4*4 matrix)
     Note: This function is not robust (without tolerance).
@@ -157,7 +159,10 @@ def kron_decomp(M):
         return None, None
 
 
-def is_tensor_prod(U):
+def is_tensor_prod(U: np.ndarray):
+    """
+    Distinguish whether a 4*4 matrix is the tensor product of two 2*2 matrices
+    """
     _, _ = kron_decomp(U)
     if _ is None:
         return False
@@ -165,7 +170,7 @@ def is_tensor_prod(U):
         return True
 
 
-def tensor_prod_decomp(U, return_u3=False) -> List[Gate]:
+def tensor_prod_decomp(U: np.ndarray, return_u3=False) -> List[Gate]:
     """
     Tensor product decomposition based on Strict KPD algorithm
     """
@@ -184,7 +189,7 @@ def tensor_prod_decomp(U, return_u3=False) -> List[Gate]:
 
 def simult_svd(A: np.ndarray, B: np.ndarray):
     """
-    Simultaneous SVD of two matrix, based on Eckart-Young theorem.
+    Simultaneous SVD of two matrices, based on Eckart-Young theorem
     :math:`A=U D_1 V^{\dagger}, B=U D_2 V^{\dagger}`
     :param A: real matrix
     :param B: real matrix
@@ -233,9 +238,9 @@ def simult_svd(A: np.ndarray, B: np.ndarray):
         raise NotImplementedError('Not implemented yet for the situation that A is not full-rank')
 
 
-def is_so4(U):
+def is_so4(U: np.ndarray):
     """
-    Distinguish if on matrix is in SO(4) (4-dimension Special Orthogonal group)
+    Distinguish if one matrix is in SO(4) (4-dimension Special Orthogonal group)
     """
     if U.shape != (4, 4):
         raise ValueError('U should be a 4*4 matrix')
@@ -244,7 +249,7 @@ def is_so4(U):
 
 def so4_to_magic_su2s(U: np.ndarray):
     """
-    Decompose 1 SO(4) operator into 2 SU(2) operators with Magic matrix transformation: U = Mdag @ kron(A, B) @ M.
+    Decompose 1 SO(4) operator into 2 SU(2) operators with Magic matrix transformation: U = Mdag @ kron(A, B) @ M
     :param U: matrix of SO(4)
     :return: two SU(2) matrices
     """
@@ -328,7 +333,8 @@ def cnot_decomp(U: np.ndarray, return_u3=False) -> List[Gate]:
 
 def decomp_gate(U: np.ndarray, return_u3: bool = False) -> List[Gate]:
     """
-    分解后门的顺序：在 hardware 上是从左到右执行的
+    High-level two-qubit gate decomposition function.
+    As for the sequence of decomposed gates, they are executed from left to right on hardware.
     :param U: the two-qubit gate in U(4)
     :param return_u3:
                 if True, each Gate instance of the returned circuit is a U3 gate, regardless of global phase
@@ -341,8 +347,10 @@ def decomp_gate(U: np.ndarray, return_u3: bool = False) -> List[Gate]:
         raise ValueError('U should be a unitary matrix')
 
     if is_tensor_prod(U):
+        # simple tensor product decomposition
         return tensor_prod_decomp(U, return_u3)
     elif is_equiv_unitary(U, gate.Swap.data):
+        # 3 CNOT gates construct a Swap gate
         return [gate.CX, gate.CX.perm(), gate.CX]
     elif is_control_unitary(U) is not None:
         # ABC decomposition

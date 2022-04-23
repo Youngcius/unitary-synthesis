@@ -28,7 +28,7 @@ def remove_glob_phase(U: np.ndarray) -> np.ndarray:
     return U * np.exp(- 1j * alpha)
 
 
-def is_equiv_unitary(U, V):
+def is_equiv_unitary(U: np.ndarray, V: np.ndarray):
     """
     Regardless of the global phase, this function distinguishes whether two unitary operator is equivalent
     (considering some precision)
@@ -47,7 +47,7 @@ def is_equiv_unitary(U, V):
         return False
 
 
-def is_control_unitary(U):
+def is_control_unitary(U: np.ndarray):
     is_control_0 = is_equiv_unitary(U[:2, :2], np.identity(2)) and np.allclose(U[2:, 2:] @ U[2:, 2:].T.conjugate(),
                                                                                np.identity(2))
     is_control_1 = is_equiv_unitary(U[2:, 2:], np.identity(2)) and np.allclose(U[:2, :2] @ U[:2, :2].T.conjugate(),
@@ -60,7 +60,7 @@ def is_control_unitary(U):
         return None
 
 
-def tensor_1_slot(U, n: int, tq: int):
+def tensor_1_slot(U: np.ndarray, n: int, tq: int):
     """
     Given a single-qubit gate, compute its tensor unitary matrix expanded
     to the whole Hilbert space (totally n qubits).
@@ -72,7 +72,7 @@ def tensor_1_slot(U, n: int, tq: int):
     return reduce(np.kron, ops)
 
 
-def tensor_2_slot(U, n: int, cq: int, tq: int):
+def tensor_2_slot(U: np.ndarray, n: int, cq: int, tq: int):
     """
     Given a two-qubit gate, compute the tensor unitary matrix expanded
     to the whole Hilbert space (totally n qubits) of a two-qubit gate.
@@ -92,7 +92,7 @@ def tensor_2_slot(U, n: int, cq: int, tq: int):
     return res
 
 
-def times_two_matrix(U, V):
+def times_two_matrix(U: np.ndarray, V: np.ndarray):
     """
     Calculate the coefficient a, s.t. U = a V
     """
