@@ -1,6 +1,6 @@
 # Two-Qubit Gate Decomposition & Reck Decomposition
 
->Date: 2011-11-27
+> Latest update date: 2021 Nov.
 
 ## Dependencies
 - numpy, scipy: for linear algebra calculation
