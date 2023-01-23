@@ -40,9 +40,16 @@
   $$
   U = e^{i\alpha} R_z(\phi) R_y(\theta) R_z(\lambda)
   $$
+  Remind that for arbitrary unitary gate,
+  $$
+  \begin{align}
+  U &= e^{i\alpha}R_z(\phi)R_y(\theta)R_z(\lambda)\\
+  &=e^{i(\alpha - \frac{\phi + \lambda}{2})} U3(\theta, \varphi,\lambda)\\
+  &= e^{i(\alpha - \frac{\phi + \lambda}{2})} e^{i\frac{\phi+\lambda}{2}}R_z(\phi)R_y(\theta)R_z(\lambda)
+  \end{align}
+  $$
   
 - `params_u3`: Obtain the global phase "p" appended to the standard U3 operator
-  
   $$
   U = e^{i p} U3(\theta, \phi, \lambda)
   $$
