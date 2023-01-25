@@ -1,6 +1,6 @@
-# Two-Qubit Gate Decomposition & Reck Decomposition
+# Unitary Synthesis (UniSys SDK)
 
-> Latest update date: 2021 Nov.
+> Latest update date: 2023 Jan.
 
 ## Dependencies
 - numpy, scipy: for linear algebra calculation
@@ -15,17 +15,18 @@
   Step 1: decompose an arbitrary two-qubit gate into $ \left( A_0 \otimes A_1 \right) e^{-iH}\left( B_0 \otimes B_1 \right)$
 
   ```txt
-  ---B0------------------A0---
-          | exp(-iH) |
-  ---B1------------------A1---
-  ```
-
+       ┌──────────┐     
+  ──B0─┤          ├─A0──
+       │ exp(-iH) │     
+  ──B1─┤          ├─A1──
+       └──────────┘    
+  ``` 
   Step 2: calculate parameterized gates $e^{-iH}$ with three CNOT gates
 
   ```txt
-  ---B0---@---U0---@---V0---@---W--------A0---
-          |        |        |
-  ---B1---X---U1---X---V1---X---W^dag----A1---
+  ──B0────●────U0────●────V0────●────W─────A0── 
+          │          │          │               
+  ──B1────X────U1────X────V1────X────W†────A1── 
   ```
 
 - `abc_decomp`: for controlled-U gate decomposition
@@ -81,19 +82,3 @@
 ## How to use
 
 See the [examples.ipynb](./src/examples.ipynb) file.
-
-## Reference
-
-[1] Vidal, G. and C. M. Dawson (2004). "Universal quantum circuit for two-qubit transformations with three controlled-NOT gates." Physical Review A 69(1).
-
-[2] Tucci, R. (2005). "An Introduction to Cartan's KAK Decomposition for QC Programmers."
-
-[3] Kraus, B. and J. I. Cirac (2001). "Optimal creation of entanglement using a two-qubit gate." Physical Review A 63(6).
-
-[4] Liu, F.-j. (2012). New Kronecker product decompositions and its applications.
-
-[5] Vatan, F. and C. Williams (2004). "Optimal quantum circuits for general two-qubit gates." Physical Review A 69(3).
-
-[6] Berman, A. and R. J. Plemmons (1994). Nonnegative matrices in the mathematical sciences, SIAM.
-
-[7] Reck, M., et al. (1994). "Experimental realization of any discrete unitary operator." Physical Review Letters **73**(1): 58-61.

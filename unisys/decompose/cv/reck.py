@@ -76,7 +76,7 @@ def reck_decomp(U: np.ndarray):
                 sign = -sign
                 prod_lat = np.real(sign * n_vec[n])
                 sin_theta = prod_lat / sin_prod
-                theta_m = cal_theta(sin_theta, cos_theta)
+                theta_m = _cal_theta(sin_theta, cos_theta)
                 theta_list.append(theta_m)
             else:
                 sin_prod = np.prod([sin(theta) for theta in theta_list])
@@ -94,7 +94,7 @@ def reck_decomp(U: np.ndarray):
     return params_T, np.diag(V)
 
 
-def cal_theta(s, c):
+def _cal_theta(s, c):
     """
     Calculate an angle value, s.t. sin(theta) == s and cos(theta) == c
     :param s: sin(theta)
