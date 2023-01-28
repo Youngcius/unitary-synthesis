@@ -38,6 +38,9 @@ class Gate:
         self.angle = kwargs['angle']
         self.angles = kwargs['angles']
 
+    def __eq__(self, other):
+        return type(self) == type(other) and np.allclose(self.data, other.data)
+
     def on(self, tqs: Union[List[int], int], cqs: Union[List[int], int] = None):
         """
         Operate on specific qubits.
@@ -66,60 +69,11 @@ class Gate:
 
     def __call__(self, *args, **kwargs):
         return self.on(*args, **kwargs)
+
     def __repr__(self):
         if not self._ctrl_qubits:
             return '{}: targ {}'.format(self.name, self._targ_qubits)
         return '{}: targ {} | ctrl {}'.format(self.name, self._targ_qubits, self._ctrl_qubits)
-    # def perm(self):
-    #     # TODO: delete this
-    #     """
-    #     Permutation of tq and cq indices, only support fixed controlled gate
-    #     :return: a new Gate instance
-    #     """
-    #     if self.cq is None:
-    #         raise ValueError('only support controlled gate')
-    #     else:
-    #         # e.g. CX, XZ, CH
-    #         cu = deepcopy(self)
-    #         cu.tq, cu.cq = self.cq, self.tq
-    #         cu.qregs = [cu.cq, cu.tq]
-    #         if cu.name == 'CX':
-    #             if cu.cq == 0:
-    #                 cu.data = np.array([[1. + 0.j, 0. + 0.j, 0. + 0.j, 0. + 0.j],
-    #                                     [0. + 0.j, 1. + 0.j, 0. + 0.j, 0. + 0.j],
-    #                                     [0. + 0.j, 0. + 0.j, 0. + 0.j, 1. + 0.j],
-    #                                     [0. + 0.j, 0. + 0.j, 1. + 0.j, 0. + 0.j]])
-    #             else:
-    #                 cu.data = np.array([[1. + 0.j, 0. + 0.j, 0. + 0.j, 0. + 0.j],
-    #                                     [0. + 0.j, 0. + 0.j, 0. + 0.j, 1. + 0.j],
-    #                                     [0. + 0.j, 0. + 0.j, 1. + 0.j, 0. + 0.j],
-    #                                     [0. + 0.j, 1. + 0.j, 0. + 0.j, 0. + 0.j]])
-    #         elif cu.name == 'CH':
-    #             if cu.cq == 0:
-    #                 cu.data = (np.kron(np.diag([1, 0]), np.identity(2)) + np.kron(np.diag([0, 1]), H.data)).astype(
-    #                     complex)
-    #             else:
-    #                 cu.data = (np.kron(np.identity(2), np.diag([1, 0])) + np.kron(H.data, np.diag([0, 1]))).astype(
-    #                     complex)
-    #         else:
-    #             raise ValueError('unsupported controlled gate currently')
-    #
-    #     return cu
-
-    #
-    # def set_qregs(self, tq, cq=None):
-    #     """
-    #     For single-qubit gate and controlled-rotation gate
-    #     :param tq: target qubit
-    #     :param cq: control qubit
-    #     :return: a new Gate instance
-    #     """
-    #     u = deepcopy(self)
-    #     u.tq = tq
-    #     if cq is not None:
-    #         u.cq = cq
-    #     u.qregs = [u.tq] if u.cq is None else [u.cq, u.tq]  # cq在前，tq在后
-    #     return u
 
     @property
     def tq(self):
@@ -156,10 +110,20 @@ class Gate:
         """
         g = deepcopy(self)
         g.data = g.data.conj().T
-        if g.name.endswith('†'):
+
+        t_names = ('T', 'TDG')
+        s_names = ('S', 'SDG')
+        if g.name in t_names:
+            idx = t_names.index(g.name)
+            g.name = t_names[(idx + 1) % 2]
+        elif g.name in s_names:
+            idx = s_names.index(g.name)
+            g.name = s_names[(idx + 1) % 2]
+        elif g.name.endswith('†'):
             g.name = g.name[:-1]
         else:
             g.name = g.name + '†'
+
         return g
 
 
@@ -173,6 +137,7 @@ class UnivGate(Gate):
         self.name = name if name else 'U'
 
 
+# Fixed Gate
 class XGate(Gate):
     def __init__(self, *args, **kwargs):
         super().__init__(np.array([[0. + 0.j, 1. + 0.j],
@@ -228,10 +193,6 @@ class ISWAPGate(Gate):
                                    [0. + 0.j, 0. + 0.j, 1.j, 0. + 0.j],
                                    [0. + 0.j, 1.j, 0. + 0.j, 0. + 0.j],
                                    [0. + 0.j, 0. + 0.j, 0. + 0.j, 1. + 0.j]]), name='ISWAP', *args, **kwargs)
-
-
-# Fixed gates: Executable quantum gates without parameters (1-qubit & 2-qubit gates)
-fixed_gates = ['x', 'y', 'z', 'i', 'h', 's', 't', 'sdg', 'tdg', 'cx', 'cz', 'swap', 'ch']  # TODO: modify this list
 
 
 # Rotation Gate
@@ -297,70 +258,17 @@ class U3(Gate):
                          name='U3', angles=(theta, phi, lamda), *args, **kwargs)
 
 
-# Rotation gates: Executable quantum gates with parameters (1-qubit & 2-qubit gates)
-# rotation_gates = ['rx', 'ry', 'rz', 'crx', 'cry', 'crz', 'u3', 'cu3']
-rotation_gates = ['rx', 'ry', 'rz', 'u3']  # TODO: modify QSAM parser
-
-
 # Non-operation Gate
 
 class Barrier:
-    # TODO
     def __init__(self):
-        ...
+        raise NotImplementedError
 
 
 class Measurement:
-    # TODO
     def __init__(self):
-        ...
+        raise NotImplementedError
 
-
-#
-# def Rx(theta: float, tq=0) -> Gate:
-#     data = linalg.expm(-1j * theta / 2 * X.data)
-#     return Gate(data, tq, name='Rx', angle=theta)
-#
-#
-# def Ry(theta: float, tq=0) -> Gate:
-#     data = linalg.expm(-1j * theta / 2 * Y.data)
-#     return Gate(data, tq, name='Ry', angle=theta)
-#
-#
-# def Rz(theta: float, tq=0) -> Gate:
-#     data = linalg.expm(-1j * theta / 2 * Z.data)
-# #     return Gate(data, tq, name='Rz', angle=theta)
-#
-#
-# def U3(theta, phi, lamda, tq=0) -> Gate:
-#     """
-#     :math: `U3(\theta, \phi, \lambda) = exp(i(\phi + \theta)/2) RZ(\phi) RZ(\theta) RZ(\lambda)`
-#     """
-#     data = np.array([[cos(theta / 2), -exp(1j * lamda) * sin(theta / 2)],
-#                      [exp(1j * phi) * sin(theta / 2), exp(1j * (phi + lamda)) * cos(theta / 2)]])
-#     return Gate(data, tq, name='U3', angles=(theta, phi, lamda))
-#
-#
-# def CRx(theta: float, tq=1, cq=0) -> Gate:
-#     data = linalg.expm(-1j * theta / 2 * X.data)
-#     return Gate(data, tq, cq, name='Rx', angle=theta)
-
-#
-# def CRy(theta: float, tq=1, cq=0) -> Gate:
-#     data = linalg.expm(-1j * theta / 2 * Y.data)
-#     return Gate(data, tq, cq, name='Ry', angle=theta)
-#
-#
-# def CRz(theta: float, tq=1, cq=0) -> Gate:
-#     data = linalg.expm(-1j * theta / 2 * Z.data)
-#     return Gate(data, tq, cq, name='Rz', angle=theta)
-#
-#
-# def CU3(theta, phi, lamda, tq=1, cq=0):
-#     data = np.array([[cos(theta / 2), -exp(1j * lamda) * sin(theta / 2)],
-#                      [exp(1j * phi) * sin(theta / 2), exp(1j * (phi + lamda)) * cos(theta / 2)]])
-#     return Gate(data, tq, cq, name='CU3', angles=(theta, phi, lamda))
-#
 
 X = XGate()
 Y = YGate()
@@ -371,3 +279,7 @@ T = TGate()
 H = HGate()
 SWAP = SWAPGate()
 ISWAP = ISWAPGate()
+
+ROTATION_GATES = ['rx', 'ry', 'rz', 'u3']
+FIXED_GATES = ['x', 'y', 'z', 'i', 'h', 's', 't', 'sdg', 'tdg', 'cx', 'cz', 'swap', 'ch']
+CONTROLLABLE_GATES = ['x', 'y', 'z', 'h', 'swap', 'rx', 'ry', 'rz', 'u3']

@@ -3,7 +3,7 @@ Operator-related Utils functions
 """
 from typing import List
 from functools import reduce
-from math import pi, sqrt, atan2
+from math import sqrt, atan2
 import numpy as np
 from scipy import linalg
 from .fucntions import is_power_of_two
@@ -282,10 +282,10 @@ def params_abc(U: np.ndarray):
     if U.shape != (2, 2):
         raise ValueError('Input matrix should be a 2*2 matrix')
     alpha, (theta, phi, lam) = params_zyz(U)
-    a = gate.Rz(phi).data @ gate.Ry(theta / 2).data
-    b = gate.Ry(-theta / 2).data @ gate.Rz(-(phi + lam) / 2).data
-    c = gate.Rz((lam - phi) / 2).data
-    return alpha, a, b, c
+    a = gate.RZ(phi).data @ gate.RY(theta / 2).data
+    b = gate.RY(-theta / 2).data @ gate.RZ(-(phi + lam) / 2).data
+    c = gate.RZ((lam - phi) / 2).data
+    return alpha, (a, b, c)
 
 
 def glob_phase(U: np.ndarray) -> float:
@@ -383,7 +383,7 @@ def simult_svd(A: np.ndarray, B: np.ndarray):
 
     D1 = U.conj().T @ A @ V
     D2 = U.conj().T @ B @ V
-    return U, V, D1, D2
+    return (U, V), (D1, D2)
 
 
 def controlled_unitary_matrix(U: np.ndarray, num_ctrl: int = 1) -> np.ndarray:

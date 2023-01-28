@@ -8,20 +8,28 @@ from functools import reduce
 
 
 def Tmn(m: int, n: int, theta: float, phi: float, N: int):
-    """
-    Return a unitary matrix with non-trivial elements arrangement in form of :math: `\left( \begin{matrix}
-                e^{i\phi}&		0\\
-                0&		1\\
-            \end{matrix} \right) \left( \begin{matrix}
-                \sin \theta&		\cos \theta\\
-                \cos \theta&		-\sin \theta\\
-            \end{matrix} \right)`
-    :param m: the first non-trivial index
-    :param n: the second non-trivial index
-    :param theta: rotation angle
-    :param phi: phase angle
-    :param N: dimension of the whole Hilbert space
-    :return: N*N matrix, np.ndarray
+    r"""
+    Return a unitary matrix with non-trivial elements arrangement in form of
+
+    .. math::
+        \left( \begin{matrix}
+                e^{i\phi} & 0\\
+                0 & 1\\
+            \end{matrix} \right)
+        \left( \begin{matrix}
+                \sin \theta & \cos \theta\\
+                \cos \theta & -\sin \theta\\
+            \end{matrix} \right)
+
+    Args:
+        m: the first non-trivial index
+        n: the second non-trivial index
+        theta: rotation angle
+        phi: phase angle
+        N: dimension of the whole Hilbert space
+
+    Returns:
+         N*N matrix, np.ndarray
     """
     T = np.identity(N).astype(complex)
     data = np.diag([np.exp(1j * phi), 1]) @ np.array(
@@ -37,12 +45,19 @@ def Tmn(m: int, n: int, theta: float, phi: float, N: int):
     return T
 
 
-def reck_decomp(U: np.ndarray):
+def reck_decompose(U: np.ndarray):
     """
     Reck decomposition of an arbitrary-dimension unitary matrix
-    :param U: unitary matrix
-    :return: a list of BS gate parameters, diagonal matrix
+
+    Args:
+        U: arbitrary-dimension unitary matrix
+
+    Returns:
+        a list of BS gate parameters, diagonal matrix
+
     """
+    if not np.allclose(U, U.real):
+        raise NotImplementedError('currently only supports real matrix')
     if U.shape[0] != U.shape[1]:
         raise ValueError('U is not a square matrix')
     N = U.shape[0]
@@ -63,7 +78,7 @@ def reck_decomp(U: np.ndarray):
         for m in range(n):
             # m in [0, ..., n-1]
             prod = sign * n_vec[m]
-            # phi_m = - np.angle(prod) TODO: remedy this to support complex matrix
+            # phi_m = - np.angle(prod) # need to remedy this to support complex matrix
             phi_m = 0
             prod = np.real(prod)
             if m == 0:
@@ -97,9 +112,13 @@ def reck_decomp(U: np.ndarray):
 def _cal_theta(s, c):
     """
     Calculate an angle value, s.t. sin(theta) == s and cos(theta) == c
-    :param s: sin(theta)
-    :param c: cos(theta)
-    :return: theta, type: float, unit: rad, range: [-pi, pi]
+
+    Args:
+        s: sin(theta) value
+        c: cos(theta) value
+
+    Returns:
+        theta, type: float, unit: rad, range: [-pi, pi]
     """
     if not np.allclose(s ** 2 + c ** 2, 1):
         raise ValueError('"s" and "c" are not a reasonable sine and cos values')

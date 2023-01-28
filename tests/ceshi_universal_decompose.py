@@ -1,0 +1,127 @@
+from unisys import decompose
+from unisys import gate
+from scipy.stats import unitary_group
+from unisys.utils.operator import controlled_unitary_matrix, multiplexor_matrix, tensor_slots
+import numpy as np
+from scipy import linalg
+from ceshi_common import assert_equivalent_unitary
+
+rand_unitary = unitary_group.rvs
+
+
+def ceshi_euler_decompose():
+    # ZYZ basis
+    print('ZYZ-basis Euler decomposition')
+    U = rand_unitary(2, random_state=123)
+    g = gate.UnivGate(U, 'U').on(0)
+    circ_zyz = decompose.euler_decompose(g)
+    print(circ_zyz)
+    assert_equivalent_unitary(U, circ_zyz.unitary())
+
+    # U3 basis
+    print('U3-basis Euler decomposition')
+    circ_u3 = decompose.euler_decompose(g, basis='u3')
+    print(circ_u3)
+    assert_equivalent_unitary(U, circ_u3.unitary())
+    print()
+
+
+def ceshi_tensor_product_decompose():
+    print('Tensor product decomposition')
+    XY = np.kron(gate.X.data, gate.Y.data)
+    g = gate.UnivGate(XY, 'XY').on([0, 1])
+    circ = decompose.tensor_product_decompose(g)
+    print(circ)
+    assert_equivalent_unitary(XY, circ.unitary())
+    print()
+
+
+def ceshi_abc_decompose():
+    # special case:
+    print('ABC decomposition: CRz(pi)')
+    g = gate.RZ(np.pi).on(1, 0)
+    circ = decompose.abc_decompose(g)
+    print(circ)
+    assert_equivalent_unitary(controlled_unitary_matrix(g.data), circ.unitary())
+
+    # arbitrary CU gate
+    print('ABC decomposition: arbitrary CU gate')
+    U = rand_unitary(2, random_state=123)
+    g = gate.UnivGate(U, 'U').on(1, 0)
+    circ = decompose.abc_decompose(g)
+    print(circ)
+    assert_equivalent_unitary(controlled_unitary_matrix(U), circ.unitary())
+    print()
+
+
+def ceshi_kak_decompose():
+    # KAK
+    print('KAK decomposition')
+    g = gate.UnivGate(rand_unitary(4, random_state=123), 'U').on([0, 1])
+    circ = decompose.kak_decompose(g)
+    print(circ)
+    print()
+    assert_equivalent_unitary(g.data, circ.unitary())
+
+
+def ceshi_demultiplex_pair():
+    n = 2
+    U1 = rand_unitary(2 ** (n - 1), random_state=123)
+    U2 = rand_unitary(2 ** (n - 1), random_state=1234)
+    circ = decompose.demultiplex_pair(U1, U2, tqs=list(range(1, n)), cq=0)
+    assert_equivalent_unitary(linalg.block_diag(U1, U2), circ.unitary())
+
+
+def ceshi_demultiplex_puali():
+    print('Demultiplexing Pauli Multiplexor')
+    np.random.seed(123)
+    n = 5
+    rads = np.random.rand(2 ** (n - 1))
+    sigma = 'Z'
+    rot_sigma = getattr(gate, f'R{sigma}')
+    cqs = list(range(n))
+    tq = cqs.pop(1)
+    U = multiplexor_matrix(n, tq, *[rot_sigma(rad).data for rad in rads])
+    circ = decompose.demultiplex_pauli(sigma, tq, cqs, *rads, permute_cnot=True)
+    print(circ)
+    print()
+    assert_equivalent_unitary(U, circ.unitary())
+
+
+def ceshi_qs_decompose():
+    print('Quantum Shannon decomposition')
+    n = 4
+    U = rand_unitary(2 ** n, random_state=123)
+    g = gate.UnivGate(U, 'U').on(list(range(n)))
+    circ = decompose.qs_decompose(g)
+    print(circ)
+    print()
+    assert_equivalent_unitary(U, circ.unitary())
+
+
+def ceshi_cu_decompose():
+    print('m-control n-target CU decomposition')
+    cqs = [0, 2, 4, 5]  # arbitrary order is OK
+    tqs = [1, 6]
+    m = len(cqs)
+    n = len(tqs)
+    U = rand_unitary(2 ** n, random_state=123)
+    circ = decompose.cu_decompose(gate.UnivGate(U, 'U').on(tqs, cqs))
+    print(circ)
+    print()
+    assert_equivalent_unitary(
+        tensor_slots(controlled_unitary_matrix(U, m), max(cqs + tqs) + 1, cqs + tqs),
+        circ.unitary()
+    )
+
+
+if __name__ == '__main__':
+    ceshi_euler_decompose()
+    ceshi_tensor_product_decompose()
+    ceshi_abc_decompose()
+    ceshi_kak_decompose()
+
+    ceshi_demultiplex_pair()
+    ceshi_demultiplex_puali()
+    ceshi_qs_decompose()
+    ceshi_cu_decompose()

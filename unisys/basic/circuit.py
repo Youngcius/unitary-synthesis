@@ -15,37 +15,26 @@ from unisys.utils.operator import tensor_slots, controlled_unitary_matrix, is_eq
 
 
 class Circuit(list):
-    def __init__(self, gates: List[Gate]):
-        super().__init__(gates)
+    def __init__(self, gates: List[Gate] = None):
+        super().__init__(gates if gates else [])
 
-    # def __getitem__(self, idx):
-    #     return self._gates[idx]
-    #
-    # def __len__(self):
-    #     return len(self._gates)
     def append(self, *gates):
         for g in gates:
             super().append(g)
+
+    def __add__(self, other):
+        return Circuit(self.copy() + other.copy())
 
     def __repr__(self):
         return 'Circuit(num_gates: {}, num_qubits: {}, with_measure: {})'.format(self.num_gates, self.num_qubits,
                                                                                  self.with_measure)
 
-    def display(self, style='text'):
-        """
-        Display the quantum circuit.
-        First transform it into QASM string, then construct a qiskit.QuantumCirtuit instance, then draw the circuit.
-
-        Args:
-            style: optional: 'mpl', 'text', 'latex'
-        """
-        qc = QuantumCircuit.from_qasm_str(self.to_qasm())
-        qc.draw(style)
+    def to_qiskit(self):
+        """Convert to qiskit.QuantumCircuit"""
+        return QuantumCircuit.from_qasm_str(self.to_qasm())
 
     def to_qasm(self, fname: str = None):
         """Convert to QSAM in form of string"""
-        # TODO: extend this function
-
         circuit = deepcopy(self)
         output = QASMStringIO()
         output.write_header()
@@ -59,9 +48,6 @@ class Circuit(list):
         tuples_parsed = parse_to_tuples(circuit)
         output.write_comment('Quantum gate operations')
         for opr, idx in tuples_parsed:
-            # if len(idx) == n:
-            #     output.write_operation(opr, 'q')
-            # else:
             output.write_operation(opr, 'q', *idx)
 
         qasm_str = output.getvalue()
@@ -250,24 +236,32 @@ def parse_to_tuples(circuit: Circuit) -> List[Tuple[str, List[int]]]:
     """
     parsed_list = []
     for g in circuit:
+        if not (len(g.tqs) == 1 and len(g.cqs) <= 1):
+            raise ValueError('Only support 1 or 2 qubit gates with designated qubits')
         gname = g.name.lower()
-        if gname in gate.fixed_gates:
-            parsed_list.append((gname, g.qregs))
-        elif gname in ['u3', 'cu3']:
-            angles = list(map(_limit_angle, g.angles))
-            opr = '{}({:.2f}, {:.2f}, {:.2f})'.format(gname, *angles)
-            parsed_list.append((opr, g.qregs))
+
+        if g.cqs:
+            if gname not in gate.CONTROLLABLE_GATES:
+                raise ValueError(f'{g} is not supported for transformation')
+            if gname in gate.FIXED_GATES:
+                opr = 'c{}'.format(gname)
+            elif gname == 'u3':
+                angles = list(map(_limit_angle, g.angles))
+                opr = 'cu3({:.2f}, {:.2f}, {:.2f})'.format(*angles)
+            else:  # CR(X/Y/Z) gate
+                angle = _limit_angle(g.angle)
+                opr = 'c{}({:.2f})'.format(gname, angle)
         else:
-            # (C)R(x/y/z) gate
-            angle = _limit_angle(g.angle)
-            opr = '{}({:.2f})'.format(gname, angle)
-            parsed_list.append((opr, g.qregs))
+            if gname in gate.FIXED_GATES:
+                opr = gname
+            elif gname == 'u3':
+                angles = list(map(_limit_angle, g.angles))
+                opr = '{}({:.2f}, {:.2f}, {:.2f})'.format(gname, *angles)
+            else:  # R(X/Y/Z) gate
+                angle = _limit_angle(g.angle)
+                opr = '{}({:.2f})'.format(gname, angle)
+        parsed_list.append((opr, g.qregs))
     return parsed_list
-
-
-import cirq
-
-cirq.Circuit
 
 
 def optimize_circuit(circuit: Circuit) -> Circuit:
@@ -285,4 +279,3 @@ def optimize_circuit(circuit: Circuit) -> Circuit:
         if not is_equiv_unitary(g.data, gate.I.data):
             circuit_opt.append(g)
     return circuit_opt
-# # TODO: rewrite QASM parser

@@ -2,6 +2,7 @@
 
 from . import fixed
 from . import universal
+from . import cv
 
 from .fixed import (
     ch_decompose, cs_decompose, ct_decompose,
@@ -11,6 +12,7 @@ from .fixed import (
 from .universal import euler_decompose
 from .universal import tensor_product_decompose, abc_decompose, kak_decompose
 from .universal import qs_decompose, cu_decompose, demultiplex_pair, demultiplex_pauli
+from .cv import reck_decompose
 
 __all__ = []
 __all__.extend(fixed.__all__)

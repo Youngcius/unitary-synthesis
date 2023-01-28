@@ -7,7 +7,7 @@ from unisys.basic import gate
 
 def swap_decompose(swap: Gate) -> Circuit:
     if not (isinstance(swap, gate.SWAPGate) and len(swap.tqs) == 2 and len(swap.cqs) == 0):
-        raise TypeError("SWAP must be a two target SWAPGate")
+        raise ValueError("SWAP must be a two target SWAPGate")
     tq1, tq2 = swap.tqs
     return Circuit([
         gate.X.on(tq2, tq1),
@@ -17,37 +17,6 @@ def swap_decompose(swap: Gate) -> Circuit:
 
 
 def cswap_decompose(cswap: Gate) -> Circuit:
-    # TODO
-    ...
-
-
-def decompose(g, decomp_func):
-    import cirq
-    from unisys.utils.operator import tensor_slots, controlled_unitary_matrix
-    from functools import reduce
-    import numpy as np
-
-    n = max(g.tqs + g.cqs) + 1
-
-    if g.n_qubits > int(np.log2(g.data.shape[0])) == 1:
-        data = reduce(np.kron, [g.data] * g.n_qubits)
-    else:
-        data = g.data
-
-    if g.cqs:
-        U = controlled_unitary_matrix(data, len(g.cqs))
-        U = tensor_slots(U, n, g.cqs + g.tqs)
-    else:
-        U = tensor_slots(data, n, g.tqs)
-
-    circ = decomp_func(g)
-    print(circ)
-    cirq.testing.assert_allclose_up_to_global_phase(
-        circ.unitary(),
-        U,
-        atol=1e-5
-    )
-
-
-if __name__ == '__main__':
-    decompose(gate.SWAP.on([0, 1]), swap_decompose)
+    if not (isinstance(cswap, gate.SWAPGate) and len(cswap.tqs) == 2 and len(cswap.cqs) == 1):
+        raise ValueError("CSWAP must be a one control two target SWAPGate")
+    raise NotImplementedError

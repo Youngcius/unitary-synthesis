@@ -19,7 +19,7 @@ def ccx_decompose(CCX: Gate) -> Circuit:
         Circuit: Decomposed circuit.
     """
     if not (isinstance(CCX, gate.XGate) and len(CCX.cqs) == 2 and len(CCX.tqs) == 1):
-        raise TypeError("CCX must be a two control one target XGate")
+        raise ValueError("CCX must be a two control one target XGate")
     cq1, cq2 = CCX.cqs
     tq = CCX.tq
     return Circuit([
@@ -56,7 +56,7 @@ def cy_decompose(CY: Gate) -> Circuit:
         Circuit: Decomposed circuit.
     """
     if not (isinstance(CY, gate.YGate) and len(CY.cqs) == 1 and len(CY.tqs) == 1):
-        raise TypeError("CY must be a one control one target YGate")
+        raise ValueError("CY must be a one control one target YGate")
     cq = CY.cq
     tq = CY.tq
     return Circuit([
@@ -81,7 +81,7 @@ def cz_decompose(CZ: Gate) -> Circuit:
         Circuit: Decomposed circuit.
     """
     if not (isinstance(CZ, gate.ZGate) and len(CZ.cqs) == 1 and len(CZ.tqs) == 1):
-        raise TypeError("CZ must be a one control one target ZGate")
+        raise ValueError("CZ must be a one control one target ZGate")
     cq = CZ.cq
     tq = CZ.tq
     return Circuit([
@@ -106,7 +106,7 @@ def crx_decompose(CRX: Gate) -> Circuit:
         Circuit: Decomposed circuit.
     """
     if not (isinstance(CRX, gate.RX) and len(CRX.cqs) == 1 and len(CRX.tqs) == 1):
-        raise TypeError("CRX must be a one control one target RXGate")
+        raise ValueError("CRX must be a one control one target RXGate")
     cq = CRX.cq
     tq = CRX.tq
     return Circuit([
@@ -134,7 +134,7 @@ def cry_decompose(CRY: Gate) -> Circuit:
         Circuit: Decomposed circuit.
     """
     if not (isinstance(CRY, gate.RY) and len(CRY.cqs) == 1 and len(CRY.tqs) == 1):
-        raise TypeError("CRY must be a one control one target RYGate")
+        raise ValueError("CRY must be a one control one target RYGate")
     cq = CRY.cq
     tq = CRY.tq
     return Circuit([
@@ -160,7 +160,7 @@ def crz_decompose(CRZ: Gate) -> Circuit:
         Circuit: Decomposed circuit.
     """
     if not (isinstance(CRZ, gate.RZ) and len(CRZ.cqs) == 1 and len(CRZ.tqs) == 1):
-        raise TypeError("CRZ must be a one control one target RZGate")
+        raise ValueError("CRZ must be a one control one target RZGate")
     cq = CRZ.cq
     tq = CRZ.tq
     return Circuit([
@@ -169,40 +169,3 @@ def crz_decompose(CRZ: Gate) -> Circuit:
         gate.RZ(-CRZ.angle / 2).on(tq),
         gate.X.on(tq, cq),
     ])
-
-
-def decompose(g, decomp_func):
-    import cirq
-    from unisys.utils.operator import tensor_slots, controlled_unitary_matrix
-    from functools import reduce
-    import numpy as np
-
-    n = max(g.tqs + g.cqs) + 1
-
-    if g.n_qubits > int(np.log2(g.data.shape[0])) == 1:
-        data = reduce(np.kron, [g.data] * g.n_qubits)
-    else:
-        data = g.data
-
-    if g.cqs:
-        U = controlled_unitary_matrix(data, len(g.cqs))
-        U = tensor_slots(U, n, g.cqs + g.tqs)
-    else:
-        U = tensor_slots(data, n, g.tqs)
-
-    circ = decomp_func(g)
-    print(circ)
-    cirq.testing.assert_allclose_up_to_global_phase(
-        circ.unitary(),
-        U,
-        atol=1e-5
-    )
-
-
-if __name__ == '__main__':
-    decompose(gate.X.on([1], [0, 2]), ccx_decompose)
-    decompose(gate.Y.on(1, 0), cy_decompose)
-    decompose(gate.Z.on(1, 0), cz_decompose)
-    decompose(gate.RX(1.2).on(2, 0), crx_decompose)
-    decompose(gate.RY(1.2).on(2, 0), cry_decompose)
-    decompose(gate.RZ(1.2).on(2, 0), crz_decompose)

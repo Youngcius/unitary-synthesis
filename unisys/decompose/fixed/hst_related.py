@@ -4,7 +4,6 @@ Decomposition rules for fixed gates composed of H, S and T.
 from math import pi
 from unisys.basic import gate
 from unisys.basic import Gate, Circuit
-from unisys.utils.operator import controlled_unitary_matrix
 
 
 def ch_decompose(CH: Gate) -> Circuit:
@@ -22,7 +21,7 @@ def ch_decompose(CH: Gate) -> Circuit:
         Circuit: Decomposed circuit.
     """
     if not (isinstance(CH, gate.HGate) and len(CH.cqs) == 1 and len(CH.tqs) == 1):
-        raise TypeError("CH must be a one control one target HGate")
+        raise ValueError("CH must be a one control one target HGate")
     cq = CH.cq
     tq = CH.tq
     return Circuit([
@@ -51,7 +50,7 @@ def cs_decompose(CS: Gate) -> Circuit:
         Circuit: Decomposed circuit.
     """
     if not (isinstance(CS, gate.SGate) and len(CS.cqs) == 1 and len(CS.tqs) == 1):
-        raise TypeError("CS must be a one control one target SGate")
+        raise ValueError("CS must be a one control one target SGate")
     cq = CS.cq
     tq = CS.tq
     return Circuit([
@@ -61,6 +60,7 @@ def cs_decompose(CS: Gate) -> Circuit:
         gate.T.on(tq).hermitian(),
         gate.X.on(tq, cq),
     ])
+
 
 def ct_decompose(CT: Gate) -> Circuit:
     """
@@ -77,7 +77,7 @@ def ct_decompose(CT: Gate) -> Circuit:
         Circuit: Decomposed circuit.
     """
     if not (isinstance(CT, gate.TGate) and len(CT.cqs) == 1 and len(CT.tqs) == 1):
-        raise TypeError("CT must be a one control one target TGate")
+        raise ValueError("CT must be a one control one target TGate")
     cq = CT.cq
     tq = CT.tq
     return Circuit([
@@ -87,34 +87,3 @@ def ct_decompose(CT: Gate) -> Circuit:
         gate.RZ(- pi / 8).on(tq),
         gate.X.on(tq, cq),
     ])
-
-
-if __name__ == '__main__':
-    import cirq
-
-    ch = gate.H.on(1, 0)
-    circ = ch_decompose(ch)
-    print(circ)
-    cirq.testing.assert_allclose_up_to_global_phase(
-        circ.unitary(),
-        controlled_unitary_matrix(ch.data),
-        atol=1e-5
-    )
-
-    cs = gate.S.on(1, 0)
-    circ = cs_decompose(cs)
-    print(circ)
-    cirq.testing.assert_allclose_up_to_global_phase(
-        circ.unitary(),
-        controlled_unitary_matrix(cs.data),
-        atol=1e-5
-    )
-
-    ct = gate.T.on(1, 0)
-    circ = ct_decompose(ct)
-    print(circ)
-    cirq.testing.assert_allclose_up_to_global_phase(
-        circ.unitary(),
-        controlled_unitary_matrix(ct.data),
-        atol=1e-5
-    )
