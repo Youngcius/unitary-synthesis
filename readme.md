@@ -31,4 +31,4 @@
 
 ## How to use
 
-See the [example.ipynb](./examples.ipynb) and [tests](./tests) for more details.
+See the [example.ipynb](./example.ipynb) and [tests](./tests) for more details.
