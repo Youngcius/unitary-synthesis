@@ -51,10 +51,10 @@ def arbitrary_2_qubit_state_circuit(state: np.ndarray, tqs: List[int] = None, re
         ])
     else:
         return Circuit([
-            Gate(W2.conj().T, tq=0),
-            Gate(W3.conj().T, tq=1),
+            gate.UnivGate(W2.conj().T, 'W2†').on(tqs[0]),
+            gate.UnivGate(W3.conj().T, 'W3†').on(tqs[1]),
             gate.Z.on(tqs[1], tqs[0]),
-            Gate(W1.conj().T, tq=1)
+            gate.UnivGate(W1.conj().T, 'W1†').on(tqs[1]),
         ])
 
 
