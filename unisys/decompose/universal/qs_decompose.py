@@ -207,7 +207,6 @@ def demultiplex_pauli(sigma: str, tq: int, cqs: List[int], *args, permute_cnot: 
         (s0, s1), (t0, t1) = _cal_demultiplex_rads(args)
         cq_1st = cqs.pop(0)
         cq_2nd = cqs.pop(0)
-        # circ = Circuit()
         circ.append(
             getattr(gate, f'R{sigma.upper()}')(s0.item()).on(tq),
             gate.X.on(tq, cq_2nd),
@@ -240,29 +239,29 @@ def _cal_demultiplex_rads(rads):
     Reshape `rads` into a blocked matrix in presentation of
 
         ┏                           ┓
-        ┃ 𝜃_{00}                    ┃
+        ┃ θ_{00}                    ┃
         ┃                           ┃
-        ┃       𝜃_{01}              ┃
+        ┃       θ_{01}              ┃
         ┃                           ┃
-        ┃             𝜃_{10}        ┃
+        ┃             θ_{10}        ┃
         ┃                           ┃
-        ┃                   𝜃_{11}  ┃
+        ┃                   θ_{11}  ┃
         ┗                           ┛
 
     Then calculate `\phi`
 
         ┏           ┓         ┏              ┓         ┏              ┓
-        ┃ 𝜑_0       ┃         ┃ 𝜃_{00}       ┃         ┃ 𝜃_{00}       ┃
+        ┃ φ_0       ┃         ┃ θ_{00}       ┃         ┃ θ_{00}       ┃
         ┃           ┃ = 1/2 * ┃              ┃ + 1/2 * ┃              ┃
-        ┃       𝜑_1 ┃         ┃       𝜃_{10} ┃         ┃       𝜃_{10} ┃
+        ┃       φ_1 ┃         ┃       θ_{10} ┃         ┃       θ_{10} ┃
         ┗           ┛         ┗              ┛         ┗              ┛
 
     and `\lambda`
 
         ┏           ┓         ┏              ┓         ┏              ┓
-        ┃ 𝜆_0       ┃         ┃ 𝜃_{00}       ┃         ┃ 𝜃_{00}       ┃
+        ┃ λ_0       ┃         ┃ θ_{00}       ┃         ┃ θ_{00}       ┃
         ┃           ┃ = 1/2 * ┃              ┃ - 1/2 * ┃              ┃
-        ┃       𝜆_1 ┃         ┃       𝜃_{10} ┃         ┃       𝜃_{10} ┃
+        ┃       λ_1 ┃         ┃       θ_{10} ┃         ┃       θ_{10} ┃
         ┗           ┛         ┗              ┛         ┗              ┛
 
     Finally, decompose multiplexors in presentation of `\phi` and `\lambda`, respectively.
