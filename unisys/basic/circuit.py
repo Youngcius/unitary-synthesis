@@ -23,7 +23,7 @@ class Circuit(list):
             super().append(g)
 
     def __add__(self, other):
-        return Circuit(self.copy() + other.copy())
+        return Circuit(deepcopy(self) + deepcopy(other))
 
     def __repr__(self):
         return 'Circuit(num_gates: {}, num_qubits: {}, with_measure: {})'.format(self.num_gates, self.num_qubits,
