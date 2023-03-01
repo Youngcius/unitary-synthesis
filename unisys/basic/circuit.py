@@ -23,7 +23,7 @@ class Circuit(list):
             super().append(g)
 
     def __add__(self, other):
-        return Circuit(deepcopy(self) + deepcopy(other))
+        return Circuit(deepcopy(self.gates) + deepcopy(other.gates))
 
     def __repr__(self):
         return 'Circuit(num_gates: {}, num_qubits: {}, with_measure: {})'.format(self.num_gates, self.num_qubits,
@@ -127,6 +127,12 @@ class Circuit(list):
                     dag.add_edge(idx_font, idx_back)
                     union_set = union_set | qreg_font
         return dag
+
+    @property
+    def gates(self, with_measure: bool = True):
+        if with_measure:
+            return [g for g in self]
+        return [g for g in self if not isinstance(g, gate.Measurement)]
 
     @property
     def num_gates(self):
