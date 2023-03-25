@@ -251,17 +251,17 @@ def _cal_demultiplex_rads(rads):
     Then calculate `\phi`
 
         ┏           ┓         ┏              ┓         ┏              ┓
-        ┃ φ_0       ┃         ┃ θ_{00}       ┃         ┃ θ_{00}       ┃
+        ┃ φ_0       ┃         ┃ θ_{00}       ┃         ┃ θ_{10}       ┃
         ┃           ┃ = 1/2 * ┃              ┃ + 1/2 * ┃              ┃
-        ┃       φ_1 ┃         ┃       θ_{10} ┃         ┃       θ_{10} ┃
+        ┃       φ_1 ┃         ┃       θ_{01} ┃         ┃       θ_{11} ┃
         ┗           ┛         ┗              ┛         ┗              ┛
 
     and `\lambda`
 
         ┏           ┓         ┏              ┓         ┏              ┓
-        ┃ λ_0       ┃         ┃ θ_{00}       ┃         ┃ θ_{00}       ┃
+        ┃ λ_0       ┃         ┃ θ_{00}       ┃         ┃ θ_{10}       ┃
         ┃           ┃ = 1/2 * ┃              ┃ - 1/2 * ┃              ┃
-        ┃       λ_1 ┃         ┃       θ_{10} ┃         ┃       θ_{10} ┃
+        ┃       λ_1 ┃         ┃       θ_{01} ┃         ┃       θ_{11} ┃
         ┗           ┛         ┗              ┛         ┗              ┛
 
     Finally, decompose multiplexors in presentation of `\phi` and `\lambda`, respectively.
