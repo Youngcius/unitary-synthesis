@@ -102,9 +102,9 @@ class Circuit(list):
         # building on parameter circuit and a corresponding DAG
         dag = self.to_dag()
         while len(dag.nodes) > 0:
-            indices_font = _obtain_font_idx(dag)
-            layers.append([self[idx] for idx in indices_font])
-            dag.remove_nodes_from(indices_font)
+            indices_front = _obtain_front_idx(dag)
+            layers.append([self[idx] for idx in indices_front])
+            dag.remove_nodes_from(indices_front)
         layers = list(map(sort_gates_on_qreg, layers))
         return layers
 
@@ -119,13 +119,13 @@ class Circuit(list):
             idx_back = len(circ_tmp)
             qreg_back = set(gate_back.qregs)
             union_set = set()
-            for idx_font in range(idx_back - 1, -1, -1):
-                gate_font = circ_tmp[idx_font]
+            for idx_front in range(idx_back - 1, -1, -1):
+                gate_front = circ_tmp[idx_front]
                 # judge if there is dependent relation about qubit(s) acted
-                qreg_font = set(gate_font.qregs)
-                if len(qreg_font & qreg_back) > 0 and len(qreg_font & union_set) == 0:
-                    dag.add_edge(idx_font, idx_back)
-                    union_set = union_set | qreg_font
+                qreg_front = set(gate_front.qregs)
+                if len(qreg_front & qreg_back) > 0 and len(qreg_front & union_set) == 0:
+                    dag.add_edge(idx_front, idx_back)
+                    union_set = union_set | qreg_front
         return dag
 
     @property
@@ -223,15 +223,15 @@ def _limit_angle(a):
             return 2 * np.pi - r
 
 
-def _obtain_font_idx(dag: nx.MultiDiGraph) -> List[int]:
+def _obtain_front_idx(dag: nx.MultiDiGraph) -> List[int]:
     """
-    Obtain the font layer of a DAG
+    Obtain the front layer of a DAG
     """
-    font_idx = []
+    front_idx = []
     for gate in dag.nodes:
         if dag.in_degree(gate) == 0:
-            font_idx.append(gate)
-    return font_idx
+            front_idx.append(gate)
+    return front_idx
 
 
 def parse_to_tuples(circuit: Circuit) -> List[Tuple[str, List[int]]]:
