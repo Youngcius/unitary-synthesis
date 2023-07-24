@@ -6,7 +6,7 @@
 - numpy, scipy: for linear algebra calculation
 - matplotlib, qiskit: for circuit object visualization
 
-## Main functions
+## Main functionalities
 
 **Gate decomposition examples:**
 
@@ -29,6 +29,6 @@
 - Arbitrary three-qubit state preparation
   
 
-## How to use
+## Usage
 
-See the [example.ipynb](./example.ipynb) and [tests](./tests) for more details.
+See the [example.ipynb](./example.ipynb) and [tests/](./tests) for more details.

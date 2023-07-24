@@ -8,7 +8,6 @@ from copy import deepcopy
 from datetime import datetime
 import numpy as np
 import networkx as nx
-from qiskit import QuantumCircuit
 from . import gate
 from .gate import Gate
 from unisys.utils.operator import tensor_slots, controlled_unitary_matrix, is_equiv_unitary
@@ -30,8 +29,20 @@ class Circuit(list):
                                                                                  self.with_measure)
 
     def to_qiskit(self):
-        """Convert to qiskit.QuantumCircuit"""
+        """Convert to qiskit.QuantumCircuit instance"""
+        try:
+            from qiskit import QuantumCircuit
+        except ImportError:
+            raise ImportError('qiskit is not installed')
         return QuantumCircuit.from_qasm_str(self.to_qasm())
+    
+    def to_cirq(self):
+        """Convert to cirq.Circuit instance"""
+        try:
+            from cirq.contrib.qasm_import import circuit_from_qasm
+        except ImportError:
+            raise ImportError('cirq is not installed')
+        return circuit_from_qasm(self.to_qasm())
 
     def to_qasm(self, fname: str = None):
         """Convert to QSAM in form of string"""
