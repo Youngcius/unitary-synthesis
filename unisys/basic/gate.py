@@ -228,15 +228,15 @@ class XPow(Gate):
 
     def __init__(self, exponent, *args, **kwargs):
         super().__init__(linalg.expm(-1j * exponent * pi / 2 * (X.data - I.data)), name='XPow', *args, **kwargs)
-        assert self.data == np.exp(1j * exponent * pi / 2) * RX(pi * exponent).data
+        assert np.allclose(self.data, np.exp(1j * exponent * pi / 2) * RX(pi * exponent).data)
 
 
 class YPow(Gate):
     """Y power gate"""
 
     def __init__(self, exponent, *args, **kwargs):
-        super().__init__(linalg.expm(-1j * exponent * pi / 2 * (Y.data - I.data)), name='YPow' * args, **kwargs)
-        assert self.data == np.exp(1j * exponent * pi / 2) * RY(pi * exponent).data
+        super().__init__(linalg.expm(-1j * exponent * pi / 2 * (Y.data - I.data)), name='YPow', * args, **kwargs)
+        assert np.allclose(self.data, np.exp(1j * exponent * pi / 2) * RY(pi * exponent).data)
 
 
 class ZPow(Gate):
@@ -244,7 +244,7 @@ class ZPow(Gate):
 
     def __init__(self, exponent, *args, **kwargs):
         super().__init__(linalg.expm(-1j * exponent * pi / 2 * (Z.data - I.data)), name='ZPow', *args, **kwargs)
-        assert self.data == np.exp(1j * exponent * pi / 2) * RZ(pi * exponent).data
+        assert np.allclose(self.data, np.exp(1j * exponent * pi / 2) * RZ(pi * exponent).data)
 
 
 class U3(Gate):
