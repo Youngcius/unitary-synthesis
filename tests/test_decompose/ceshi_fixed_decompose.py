@@ -1,5 +1,5 @@
 from unisys import gate, decompose
-from ceshi_common import ceshi_decompose
+from tests.ceshi_common import ceshi_decompose
 
 if __name__ == '__main__':
     # Pauli-related gates decomposition
@@ -22,4 +22,3 @@ if __name__ == '__main__':
     # SWAP decomposition
     print('SWAP decomposition')
     ceshi_decompose(gate.SWAP.on([0, 1]), decompose.swap_decompose)
-

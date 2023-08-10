@@ -4,7 +4,7 @@ from scipy.stats import unitary_group
 from unisys.utils.operator import controlled_unitary_matrix, multiplexor_matrix, tensor_slots
 import numpy as np
 from scipy import linalg
-from ceshi_common import assert_equivalent_unitary
+from tests.ceshi_common import assert_equivalent_unitary
 
 rand_unitary = unitary_group.rvs
 

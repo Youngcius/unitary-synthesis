@@ -4,11 +4,11 @@ from typing import List
 import numpy as np
 from scipy import linalg
 from unisys.basic import Gate, Circuit, gate
-from ..fixed import ccx_decompose
-from .one_qubit_decompose import euler_decompose
-from .two_qubit_decompose import abc_decompose
+from unisys.decompose.fixed.pauli_related import ccx_decompose
+from unisys.decompose.universal.one_qubit_decompose import euler_decompose
+from unisys.decompose.universal.two_qubit_decompose import abc_decompose
 from unisys.utils.operator import controlled_unitary_matrix
-from unisys.utils.fucntions import is_power_of_two
+from unisys.utils.functions import is_power_of_two
 from unisys.basic.circuit import optimize_circuit
 
 

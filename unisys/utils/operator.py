@@ -6,8 +6,9 @@ from functools import reduce
 from math import sqrt, atan2
 import numpy as np
 from scipy import linalg
-from .fucntions import is_power_of_two
-from ..basic import gate
+from unisys.basic import gate
+from unisys.utils.functions import is_power_of_two
+
 
 M = np.array([[1, 0, 0, 1j],
               [0, 1j, 1, 0],

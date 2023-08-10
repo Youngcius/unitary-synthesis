@@ -6,8 +6,8 @@ from typing import List
 from numpy.linalg import norm
 from numpy import conjugate
 from scipy import linalg
-from ..basic import Gate, Circuit, gate
-from ..utils.operator import params_u3
+from unisys.basic import gate, Circuit
+from unisys.utils.operator import params_u3
 
 
 def arbitrary_2_qubit_state_circuit(state: np.ndarray, tqs: List[int] = None, return_u3: bool = True) -> Circuit:

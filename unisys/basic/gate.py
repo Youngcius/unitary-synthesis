@@ -7,7 +7,7 @@ import numpy as np
 from scipy import linalg
 from numpy import exp, sin, cos, sqrt
 from copy import deepcopy
-from ..utils.fucntions import is_power_of_two
+from unisys.utils.functions import is_power_of_two
 
 
 class Gate:
@@ -21,8 +21,6 @@ class Gate:
             tqs: target qubit indices
             cqs: control qubit indices, optional
             name: name of the quantum gate, optional
-            *args:
-            **kwargs:
         """
         self.name = name
         self._targ_qubits = []
@@ -38,8 +36,11 @@ class Gate:
         self.angle = kwargs['angle']
         self.angles = kwargs['angles']
 
-    def __eq__(self, other):
-        return type(self) == type(other) and np.allclose(self.data, other.data)
+    def __hash__(self):
+        return hash(id(self))
+
+    def clone(self):
+        return deepcopy(self)
 
     def on(self, tqs: Union[List[int], int], cqs: Union[List[int], int] = None):
         """
@@ -74,6 +75,13 @@ class Gate:
         if not self._ctrl_qubits:
             return '{}: targ {}'.format(self.name, self._targ_qubits)
         return '{}: targ {} | ctrl {}'.format(self.name, self._targ_qubits, self._ctrl_qubits)
+
+    def math_repr(self):
+        tqs_str = str(self._targ_qubits[0]) if len(self._targ_qubits) == 1 else ','.join([str(tq) for tq in self._targ_qubits])
+        cqs_str = str(self._ctrl_qubits[0]) if len(self._ctrl_qubits) == 1 else ','.join([str(cq) for cq in self._ctrl_qubits])
+        if not self._ctrl_qubits:
+            return '${}_{{{}}}$'.format(self.name, tqs_str)
+        return '${}_{{{}}}^{{{}}}$'.format(self.name, tqs_str, cqs_str)
 
     @property
     def tq(self):

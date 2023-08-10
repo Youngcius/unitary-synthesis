@@ -1,12 +1,19 @@
 # Unitary Synthesis (UniSys SDK)
 
-> Latest update date: 2023 Jan.
+> Latest update date: 2023 August
 
 ## Dependencies
 - numpy, scipy: for linear algebra calculation
-- matplotlib, qiskit: for circuit object visualization
+- matplotlib, qiskit, cirq: for circuit object visualization
 
 ## Main functionalities
+
+**Qubit mapping and routing:**
+
+- Exact algorithms
+  - ...
+- Heuristic algorithms 
+  - SABRE
 
 **Gate decomposition examples:**
 
@@ -31,4 +38,4 @@
 
 ## Usage
 
-See the [example.ipynb](./example.ipynb) and [tests/](./tests) for more details.
+See the [tests/](./tests) for more details.

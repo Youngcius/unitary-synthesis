@@ -5,7 +5,7 @@ import numpy as np
 from scipy import linalg
 from unisys.basic import gate, Gate, Circuit
 from unisys.basic.circuit import optimize_circuit
-from ..fixed import crx_decompose, cry_decompose, crz_decompose
+from unisys.decompose.fixed.pauli_related import crx_decompose, cry_decompose, crz_decompose
 from unisys.utils.operator import M, M_DAG, A
 from unisys.utils.operator import params_abc, params_zyz, params_u3
 from unisys.utils.operator import kron_decomp, is_tensor_prod, kron_factor_4x4_to_2x2s
