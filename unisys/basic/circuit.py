@@ -93,7 +93,7 @@ class Circuit(list):
                 [mapping[cq] for cq in g.cqs]
             ))
         return mapped_circ
-    
+
     def inverse(self):
         """Inverse of the original circuit by reversing the order of gates' hermitian conjugates"""
         raise NotImplementedError
@@ -265,9 +265,11 @@ class QASMStringIO(io.StringIO):
     def write_operation(self, opr: str, qreg_name: str, *args) -> int:
         """
         Write computational gate operation into the string stream.
-        :param opr: e.g. 'cx'
-        :param qreg_name: e.g. 'q'
-        :param args: e.g. 0, 1
+
+        Args:
+            opr: e.g. 'cx'
+            qreg_name: e.g. 'q'
+            args: e.g. 0, 1
         """
         if len(args) == 0:
             line = opr + ' ' + qreg_name + ';\n'
@@ -314,8 +316,12 @@ def _obtain_front_indices(dag: nx.MultiDiGraph) -> List[int]:
 def parse_to_tuples(circuit: Circuit) -> List[Tuple[str, List[int]]]:
     """
     Parse each Gate instance into a tuple consisting gate name and quantum register indices of a list
-    :param circuit:
-    :return: [('u3', [0]), ..., ('cu3', [0, 1])]
+
+    Args:
+        circuit (Circuit): input Circuit instance
+
+    Returns:
+        List of tuples representing designated quantum operation, e.g. [('u3', [0]), ..., ('cu3', [0, 1])]
     """
     parsed_list = []
     for g in circuit:
