@@ -114,6 +114,7 @@ class Gate:
     def hermitian(self):
         """
         Hermitian conjugate of the origin gate
+
         Returns: a new Gate instance
         """
         g = deepcopy(self)
@@ -136,9 +137,7 @@ class Gate:
 
 
 class UnivGate(Gate):
-    """
-    Universal quantum gate
-    """
+    """Universal quantum gate"""
 
     def __init__(self, data, name=None, *args, **kwargs):
         super().__init__(data, *args, **kwargs)
