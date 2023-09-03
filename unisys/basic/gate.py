@@ -77,8 +77,10 @@ class Gate:
         return '{}: targ {} | ctrl {}'.format(self.name, self._targ_qubits, self._ctrl_qubits)
 
     def math_repr(self):
-        tqs_str = str(self._targ_qubits[0]) if len(self._targ_qubits) == 1 else ','.join([str(tq) for tq in self._targ_qubits])
-        cqs_str = str(self._ctrl_qubits[0]) if len(self._ctrl_qubits) == 1 else ','.join([str(cq) for cq in self._ctrl_qubits])
+        tqs_str = str(self._targ_qubits[0]) if len(self._targ_qubits) == 1 else ','.join(
+            [str(tq) for tq in self._targ_qubits])
+        cqs_str = str(self._ctrl_qubits[0]) if len(self._ctrl_qubits) == 1 else ','.join(
+            [str(cq) for cq in self._ctrl_qubits])
         if not self._ctrl_qubits:
             return '${}_{{{}}}$'.format(self.name, tqs_str)
         return '${}_{{{}}}^{{{}}}$'.format(self.name, tqs_str, cqs_str)
@@ -130,6 +132,8 @@ class Gate:
             g.name = s_names[(idx + 1) % 2]
         elif g.name.endswith('†'):
             g.name = g.name[:-1]
+        elif np.allclose(g.data, self.data):
+            pass
         else:
             g.name = g.name + '†'
 
@@ -174,10 +178,22 @@ class SGate(Gate):
                                    [0. + 0.j, 1.j]]), name='S', *args, **kwargs)
 
 
+class SDGGate(Gate):
+    def __init__(self, *args, **kwargs):
+        super().__init__(np.array([[1. + 0.j, 0. + 0.j],
+                                   [0. + 0.j, -1.j]]), name='SDG', *args, **kwargs)
+
+
 class TGate(Gate):
     def __init__(self, *args, **kwargs):
         super().__init__(np.array([[1. + 0.j, 0. + 0.j],
                                    [0. + 0.j, np.exp(1.j * pi / 4)]]), name='T', *args, **kwargs)
+
+
+class TDGGate(Gate):
+    def __init__(self, *args, **kwargs):
+        super().__init__(np.array([[1. + 0.j, 0. + 0.j],
+                                   [0. + 0.j, np.exp(- 1.j * pi / 4)]]), name='TDG', *args, **kwargs)
 
 
 class HGate(Gate):
@@ -221,7 +237,7 @@ class RZ(Gate):
 class PhaseShift(Gate):
     def __init__(self, theta, *args, **kwargs):
         super().__init__(np.array([[1. + 0., 0. + 0.],
-                                   [0. + 0., np.exp(1j * theta)]]), name='PhaseShift', angle=theta, *args, **kwargs)
+                                   [0. + 0., np.exp(1j * theta)]]), name='P', angle=theta, *args, **kwargs)
 
 
 class GlobalPhase(Gate):
@@ -242,7 +258,7 @@ class YPow(Gate):
     """Y power gate"""
 
     def __init__(self, exponent, *args, **kwargs):
-        super().__init__(linalg.expm(-1j * exponent * pi / 2 * (Y.data - I.data)), name='YPow', * args, **kwargs)
+        super().__init__(linalg.expm(-1j * exponent * pi / 2 * (Y.data - I.data)), name='YPow', *args, **kwargs)
         assert np.allclose(self.data, np.exp(1j * exponent * pi / 2) * RY(pi * exponent).data)
 
 
@@ -282,7 +298,9 @@ Y = YGate()
 Z = ZGate()
 I = IGate()
 S = SGate()
+SDG = SDGGate()
 T = TGate()
+TDG = TDGGate()
 H = HGate()
 SWAP = SWAPGate()
 ISWAP = ISWAPGate()
@@ -290,3 +308,5 @@ ISWAP = ISWAPGate()
 ROTATION_GATES = ['rx', 'ry', 'rz', 'u3']
 FIXED_GATES = ['x', 'y', 'z', 'i', 'h', 's', 't', 'sdg', 'tdg', 'cx', 'cz', 'swap', 'ch']
 CONTROLLABLE_GATES = ['x', 'y', 'z', 'h', 'swap', 'rx', 'ry', 'rz', 'u3']
+HERMITIAN_GATES = ['x', 'y', 'z', 'h', 'swap']
+READABLE_GATES = ['x', 'y', 'z', 'rx', 'ry', 'rz', 'swap', '']

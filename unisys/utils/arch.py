@@ -7,9 +7,9 @@ import networkx as nx
 from numpy import ndarray
 from typing import List, Dict, Tuple
 from networkx import Graph
-from unisys import Gate, Circuit
-from unisys import gate
-from unisys.basic.gate import SWAPGate
+from unisys.basic.gate import Gate, SWAPGate
+from unisys.basic import gate
+from unisys.basic.circuit import Circuit
 
 
 def has_decomposed_completely(circ: Circuit):
@@ -43,7 +43,7 @@ def gene_init_mapping(circ: Circuit, device: Graph, method: str = 'random') -> D
     assert len(physical_qubits) >= len(
         logical_qubits), "The number of physical qubits should be greater than the number of logical qubits"
     if method == 'random':
-        # random.seed(1)
+        # random.seed(10)
         random.shuffle(physical_qubits)
         subgraph = device.subgraph(physical_qubits[:n])
         while not nx.is_connected(subgraph):
@@ -151,17 +151,6 @@ def verify_mapped_circuit(circ: Circuit, mapped_circ: Circuit, init_mapping: Dic
     mapped_circ.append(*obtain_appended_swaps(init_final_mapping))
     mat2 = mapped_circ.unitary()
     return np.allclose(mat1, mat2)
-
-
-def verify_mapped_circuit_by_state(circ: Circuit, mapped_circ: Circuit, init_mapping: Dict[int, int],
-                                   final_mapping: Dict[int, int]):
-    # by comparing final states
-    s0 = np.random.rand(2 ** circ.num_qubits)  # random initial state
-    s0 = s0 / np.linalg.norm(s0)
-    s1 = circ.unitary() @ s0
-    s2 = mapped_circ.unitary() @ s0
-    # operator.tensor_slots()
-    return np.allclose(s1, s2)
 
 
 def obtain_appended_swaps(mapping) -> List[Gate]:

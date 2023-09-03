@@ -20,7 +20,7 @@ def ceshi_verify():
     circ_with_swaps = circ.clone()
     circ_with_swaps.insert(-2, inserted_swap)
 
-    device = arch.read_device_topology('../benchmark/topology/oslo.graphml')
+    device = arch.read_device_topology('../../benchmark/topology/oslo.graphml')
     mapping = arch.gene_init_mapping(circ, device)
     updated_mapping = arch.update_mapping(mapping, inserted_swap)
     print('Initial mapping:', mapping)

@@ -2,7 +2,9 @@
 Quantum Circuit
 """
 import io
+import re
 from functools import reduce
+from operator import add
 from typing import List, Tuple, Dict
 from copy import deepcopy
 from datetime import datetime
@@ -50,13 +52,61 @@ class Circuit(list):
 
     @classmethod
     def from_qasm(self, qasm_str: str = None, fname: str = None):
-        """Convert QASM string to Circuit instance"""
+        """
+        Convert QASM string to Circuit instance
+
+        First parse each line as a list of strings, e.g.,
+
+        'cx q[2], q[1];',                     -->  ['cx', 'q[2]', 'q[1]']
+        'h q[2];',                            -->  ['h', 'q[2]']
+        'rx(0.50) q[0];',                     -->  ['rx', '0.50', 'q[0]']
+        'ry(0.50) q[1];',                     -->  ['ry', '0.50', 'q[1]']
+        'u3(0.30, 0.12, 1.12) q[2];',         -->  ['u3', '0.30', '0.12', '1.12', 'q[2]']
+        'cu3(0.30, 0.12, 1.12) q[0], q[1];',  -->  ['cu3', '0.30', '0.12', '1.12', 'q[0]', 'q[1]']
+
+        Then construct the corresponding Gate instance according to the parsed list.
+        """
         if qasm_str is None and fname is None:
             raise ValueError("Either qasm_str or fname should be given")
         if qasm_str is None:
             with open(fname, 'r') as f:
                 qasm_str = f.read()
-        raise NotImplementedError
+        # print(qasm_str)
+        input = io.StringIO(qasm_str)
+        circ = Circuit()
+        for line in input.readlines():
+            line = line.strip().strip(';')
+            if (line.startswith('//') or line.startswith('OPENQASM') or line.startswith('include') or
+                    line.startswith('qreg') or line.startswith('creg') or line.startswith('barrier') or
+                    line.startswith('measure') or line == ''):
+                continue
+            line = re.split(r'\s*,\s*|\s+', line)  # split according to ',' or '\s+'
+            line = [re.split(r'\(|\)', s) for s in line]  # split each element according to '(' or ')
+            line = reduce(add, line)
+            line = [s for s in line if s != '']
+            if line[0].startswith('c'):
+                gname = line[0][1:]
+                tq = int(line[-1][2:-1])
+                cq = int(line[-2][2:-1])
+            else:
+                gname = line[0]
+                tq = int(line[-1][2:-1])
+                cq = None
+            if gname in gate.FIXED_GATES:
+                g = getattr(gate, gname.upper()).on(tq, cq)
+            elif gname == 'u3':
+                angles = [float(line[1][1:-1]), float(line[2][1:-1]), float(line[3][1:-1])]
+                # angles = list(map(float, line[1][1:-1].split(',')))
+                g = gate.U3(*angles).on(tq, cq)
+            elif gname in ['rx', 'ry', 'rz']:
+                # angle = float(line[1][1:-1])
+                angle = float(line[1])
+                g = getattr(gate, gname.upper())(angle).on(tq, cq)
+            else:
+                raise ValueError(f'Unsupported gate {gname}')
+            circ.append(g)
+
+        return circ
 
     def to_qasm(self, fname: str = None):
         """Convert self to QSAM string"""
@@ -96,7 +146,7 @@ class Circuit(list):
 
     def inverse(self):
         """Inverse of the original circuit by reversing the order of gates' hermitian conjugates"""
-        raise NotImplementedError
+        return Circuit([g.hermitian() for g in reversed(self)])
 
     def unitary(self, msb: bool = False) -> np.ndarray:
         """
@@ -141,7 +191,6 @@ class Circuit(list):
                 return sorted(circuit, key=lambda g: min(g.qregs))
 
         layers = []
-        # building on parameter circuit and a corresponding DAG
         dag = self.to_dag()
         while len(dag.nodes) > 0:
             indices_front = _obtain_front_indices(dag)
@@ -243,6 +292,7 @@ class Circuit(list):
 
     @property
     def with_measure(self):
+        """Whether the circuit contains measurement gates"""
         for g in self:
             if isinstance(g, gate.Measurement):
                 return True
@@ -304,7 +354,7 @@ class QASMStringIO(io.StringIO):
 
 def _obtain_front_indices(dag: nx.MultiDiGraph) -> List[int]:
     """
-    Obtain the front layer of a DAG
+    Obtain node indices of the front layer of a DAG
     """
     front_indices = []
     for node in dag.nodes:
