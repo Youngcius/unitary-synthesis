@@ -10,12 +10,18 @@
 
 **Qubit mapping and routing:**
 
+*E.g.*:
+![](./images/mapping-demo.jpeg)
+
 - Exact algorithms
   - ...
 - Heuristic algorithms 
   - SABRE
 
 **Gate decomposition examples:**
+
+*E.g.*:
+![](./images/decomposition-demo.png)
 
 - Fixed gate decomposition
   - SWAP 

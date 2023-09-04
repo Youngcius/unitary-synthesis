@@ -134,7 +134,7 @@ def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, 
 
             mapping = update_mapping(mapping, swap_candidates[idx_min])
             mappings.append(mapping.copy())
-            # console.rule('updated: {}, after {}'.format(mapping, swap))
+            console.rule('updated: {}, after {}'.format(mapping, swap))
             # print()
     print('final_mapping:', mapping)
     if return_circ_with_swaps:
