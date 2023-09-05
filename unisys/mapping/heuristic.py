@@ -34,16 +34,16 @@ def sabre_search(circ: Circuit, device: Graph, num_pass_periods: int = 3) -> Tup
         Final mapping from logical to physical qubits
     """
     init_mapping = None
+    circ_inv = circ.inverse()
     for i in range(num_pass_periods):
         console.rule('SABRE bidirectional pass period {}'.format(i))  # 2k+1 passes
 
         console.print('forward pass', style='bold green')
-        mapped_circ, init_mapping, final_mapping = sabre_search_one_pass(circ, device, init_mapping)
+        _, _, final_mapping = sabre_search_one_pass(circ, device, init_mapping)
 
         console.print('reversed pass', style='bold blue')
-        circ_inv = mapped_circ.inverse()
         init_mapping = final_mapping
-        mapped_circ_inv, init_mapping, final_mapping = sabre_search_one_pass(circ_inv, device, init_mapping)
+        _, _, final_mapping = sabre_search_one_pass(circ_inv, device, init_mapping)
 
         init_mapping = final_mapping
 

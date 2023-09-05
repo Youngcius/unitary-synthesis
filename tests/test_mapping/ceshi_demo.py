@@ -23,14 +23,14 @@ ceshi_mapping(circ, device_fname='../../benchmark/topology/oslo.graphml')
 ############################################
 # grid graph
 ############################################
-ceshi_mapping(circ, arch.gene_grid_2d_graph(circ.num_qubits))
+# ceshi_mapping(circ, arch.gene_grid_2d_graph(circ.num_qubits))
 
 ############################################
 # random connected graph
 ############################################
-ceshi_mapping(circ, nx.connected_watts_strogatz_graph(circ.num_qubits, 2, 0.5))
+# ceshi_mapping(circ, nx.connected_watts_strogatz_graph(circ.num_qubits, 2, 0.5))
 
 ############################################
 # chain graph
 ############################################
-ceshi_mapping(circ, nx.path_graph(circ.num_qubits))
+# ceshi_mapping(circ, nx.path_graph(circ.num_qubits))

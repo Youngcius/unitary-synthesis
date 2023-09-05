@@ -13,7 +13,6 @@ fnames = [os.path.join(small_circ_path, fname) for fname in fnames]
 
 
 def test_path_coupling_graph():
-    # TODO: sometimes some case fails???
     for fname in fnames:
         circ = Circuit.from_qasm(fname=fname)
         ceshi_mapping(circ, nx.path_graph(circ.num_qubits))
@@ -26,7 +25,6 @@ def test_grid_coupling_graph():
 
 
 def test_random_connected_graph():
-    # TODO: sometimes some case fails???
     for fname in fnames:
         circ = Circuit.from_qasm(fname=fname)
         ceshi_mapping(circ, nx.connected_watts_strogatz_graph(circ.num_qubits, 2, 0.5))
