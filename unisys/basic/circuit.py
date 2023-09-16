@@ -207,8 +207,6 @@ class Circuit(list):
         while all_gates:
             g = all_gates.pop(0)
             qregs = set(g.qregs)
-            if not all_gates:
-                break
             for g_opt in all_gates:  # traverse the subsequent optional gates
                 qregs_opt = set(g_opt.qregs)
                 if qregs_opt & qregs:
