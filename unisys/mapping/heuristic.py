@@ -89,7 +89,7 @@ def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, 
     exe_gates = []
     scores = {}
     print('initial_mapping:', mapping)
-    num_searchs = 0
+    num_searches = 0
     while front_layer:
         # print()
         # print('front_layer:', front_layer)
@@ -111,10 +111,10 @@ def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, 
             front_layer = obtain_front_layer(dag, circ)
         else:  # find suitable SWAP gates
             # reset decay_params each 5 rounds
-            num_searchs += 1
-            if num_searchs == 5:
+            num_searches += 1
+            if num_searches == 5:
                 decay_params = {q: 0.1 for q in circ.qubits}
-                num_searchs = 0
+                num_searches = 0
 
             scores.clear()
             swap_candidates = obtain_swap_candidates(front_layer, mapping, device)
