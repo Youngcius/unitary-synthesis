@@ -123,14 +123,13 @@ def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, 
                 scores[swap] = heuristic_score(front_layer, dag, circ, mapping, swap, dist_mat, decay_params)
 
             # find the SWAP with minimal score
-            idx_min = np.argmin(list(scores.values()))
-            swap = swap_candidates[idx_min]
+            swap = swap_candidates[np.argmin(list(scores.values()))]
             circ_with_swaps.append(swap)
             decay_params[swap.tqs[0]] += decay_step
             decay_params[swap.tqs[1]] += decay_step
             # print('updated decay params:', decay_params)
 
-            mapping = update_mapping(mapping, swap_candidates[idx_min])
+            mapping = update_mapping(mapping, swap)
             mappings.append(mapping.copy())
             console.rule('updated: {}, after {}'.format(mapping, swap))
             # print()
@@ -170,7 +169,7 @@ def obtain_swap_candidates(gates: List[Gate], mapping: Dict[int, int], device: G
 
 
 def heuristic_score(front_layer: List[Gate], dag: nx.MultiDiGraph, circ: Circuit, mapping: Dict[int, int],
-                    swap: SWAPGate, dist_mat: ndarray, decay_params: Dict[float, int]) -> float:
+                    swap: SWAPGate, dist_mat: ndarray, decay_params: Dict[int, float]) -> float:
     """
     Effect of decay parameter: 
         trade-off between number of gates and depth, i.e., if q is involved in a SWAP recently, then its decay parameter will increase by delta
