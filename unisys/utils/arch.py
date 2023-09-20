@@ -216,12 +216,80 @@ def gene_grid_2d_graph(total_number: int) -> Graph:
     return nx.subgraph(g, range(total_number))
 
 
-def gene_random_circuit(num_qubits: int, depth: int, op_density: float):
-    # , gate_domain: Optional[Dict[Gate, int]] = None):
-    """Generate a random circuit"""
-    # qubits: Union[Sequence[ops.Qid], int],
-    # n_moments: int,
-    # op_density: float,
-    # gate_domain: Optional[Dict[ops.Gate, int]] = None,
-    # random_state: 'cirq.RANDOM_STATE_OR_SEED_LIKE' = None,
-    raise NotImplementedError
+def gene_random_circuit(num_qubits: int, depth: int, seed=None) -> Circuit:
+    """
+    Generate random circuit of arbitrary size and form.
+
+    This function leverages traits from qiskit.circuit.random.random_circuit function.
+
+
+    Args:
+        num_qubits (int): number of quantum wires
+        depth (int): layers of operations (i.e. critical path length)
+        seed (int): sets random seed (optional)
+
+    Returns:
+        Circuit: constructed circuit
+    """
+    from qiskit.circuit.library.standard_gates import (XGate, YGate, ZGate, HGate, SGate, SdgGate, TGate, TdgGate,
+                                                       RXGate, RYGate, RZGate, CXGate, CYGate, CZGate, CHGate)
+    from qiskit import QuantumCircuit, QuantumRegister
+    one_q_ops = [
+        XGate,
+        YGate,
+        ZGate,
+        HGate,
+        SGate,
+        SdgGate,
+        TGate,
+        TdgGate,
+        RXGate,
+        RYGate,
+        RZGate,
+    ]
+
+    max_operands = 2
+    one_param = [RXGate, RYGate, RZGate]
+    two_param = []
+    three_param = []
+    two_q_ops = [CXGate, CYGate, CZGate, CHGate]
+    three_q_ops = []
+
+    qr = QuantumRegister(num_qubits, "q")
+    qc = QuantumCircuit(num_qubits)
+
+    if seed is None:
+        seed = np.random.randint(0, np.iinfo(np.int32).max)
+    rng = np.random.default_rng(seed)
+
+    # apply arbitrary random operations at every depth
+    for _ in range(depth):
+        # choose either 1, 2, or 3 qubits for the operation
+        remaining_qubits = list(range(num_qubits))
+        rng.shuffle(remaining_qubits)
+        while remaining_qubits:
+            max_possible_operands = min(len(remaining_qubits), max_operands)
+            num_operands = rng.choice(range(max_possible_operands)) + 1
+            operands = [remaining_qubits.pop() for _ in range(num_operands)]
+            if num_operands == 1:
+                operation = rng.choice(one_q_ops)
+            elif num_operands == 2:
+                operation = rng.choice(two_q_ops)
+            elif num_operands == 3:
+                operation = rng.choice(three_q_ops)
+            if operation in one_param:
+                num_angles = 1
+            elif operation in two_param:
+                num_angles = 2
+            elif operation in three_param:
+                num_angles = 3
+            else:
+                num_angles = 0
+            angles = [rng.uniform(0, 2 * np.pi) for x in range(num_angles)]
+            register_operands = [qr[i] for i in operands]
+            op = operation(*angles)
+
+            # with some low probability, condition on classical bit values
+            qc.append(op, register_operands)
+
+    return Circuit.from_qasm(qc.qasm())

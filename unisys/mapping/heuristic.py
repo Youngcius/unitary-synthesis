@@ -105,7 +105,6 @@ def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, 
 
         if exe_gates:  # update front_layer and continue the loop
             for g in exe_gates:
-                front_layer.remove(g)
                 dag.remove_node(circ.index(g))
                 circ_with_swaps.append(g)
             front_layer = obtain_front_layer(dag, circ)

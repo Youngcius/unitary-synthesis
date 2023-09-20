@@ -90,7 +90,10 @@ class Circuit(list):
                 cq = int(line[-2][2:-1])
             else:
                 gname = line[0]
-                tq = int(line[-1][2:-1])
+                if gname == 'swap':
+                    tq = [int(line[-2][2:-1]), int(line[-1][2:-1])]
+                else:
+                    tq = int(line[-1][2:-1])
                 cq = None
             if gname in gate.FIXED_GATES:
                 g = getattr(gate, gname.upper()).on(tq, cq)
