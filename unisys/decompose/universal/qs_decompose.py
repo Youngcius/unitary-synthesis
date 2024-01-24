@@ -8,7 +8,7 @@ from unisys.basic import gate
 from unisys.decompose.fixed.pauli_related import ccx_decompose
 from unisys.decompose.universal.one_qubit_decompose import euler_decompose
 from unisys.decompose.universal.two_qubit_decompose import abc_decompose
-from unisys.utils.operator import controlled_unitary_matrix
+from unisys.utils.operations import controlled_unitary_matrix
 from unisys.utils.functions import is_power_of_two
 from unisys.basic.circuit import Circuit, optimize_circuit
 

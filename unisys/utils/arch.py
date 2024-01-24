@@ -7,25 +7,15 @@ import networkx as nx
 from numpy import ndarray
 from typing import List, Dict, Tuple
 from networkx import Graph
-from unisys.basic.gate import Gate, SWAPGate
 from unisys.basic import gate
+from unisys.basic.gate import Gate, SWAPGate
 from unisys.basic.circuit import Circuit
-
-
-def has_decomposed_completely(circ: Circuit):
-    """
-    Distinguish whether the circuit has been decomposed into "1Q + 2Q" gates completely but without SWAP gates
-    """
-    for g in circ:
-        if len(g.qregs) > 2 or isinstance(g, SWAPGate):
-            return False
-    return True
 
 
 def gene_init_mapping(circ: Circuit, device: Graph, method: str = 'random') -> Dict[int, int]:
     """
     Generate initial mapping
-    
+
     Args:
         circ: input Circuit instance
         device: coupling graph representing qubit connections
@@ -67,7 +57,7 @@ def is_executable(gate: Gate, mapping: Dict[int, int], dist_mat: ndarray = None,
         mapping: logical to physical qubit mapping
         dist_mat: distance matrix of the coupling graph (optional)
         device: coupling graph representing qubit connections (optional)
-    
+
     Returns:
         True if the input gate acts on connected qubits. False otherwise.
     """
@@ -147,7 +137,7 @@ def verify_mapped_circuit(circ: Circuit, mapped_circ: Circuit, init_mapping: Dic
     """
     init_final_mapping = obtain_logic_logic_mapping(init_mapping, final_mapping)
     mat1 = circ.unitary()
-    mapped_circ = mapped_circ.clone()
+    mapped_circ = mapped_circ.deepclone()
     mapped_circ.append(*obtain_appended_swaps(init_final_mapping))
     mat2 = mapped_circ.unitary()
     return np.allclose(mat1, mat2)
@@ -186,6 +176,16 @@ def obtain_logic_logic_mapping(mapping1: Dict[int, int], mapping2: Dict[int, int
     logic_logic_mapping = {inverse_mapping1[q]: inverse_mapping2[q] for q in physical_qubits}
     logic_logic_mapping = dict(sorted(logic_logic_mapping.items(), key=lambda x: x[0]))
     return logic_logic_mapping
+
+
+def obtain_logical_neighbors(qubit: int, mapping: Dict[int, int], device: Graph) -> List[int]:
+    """Obtain logical neighbors of a logical qubit according to the logical-physical mapping and device connectivity"""
+    # print(qubit, mapping[qubit])
+    physical_neighbors = device.neighbors(mapping[qubit])
+    inverse_mapping = {v: k for k, v in mapping.items()}
+    # NOTE: physical neighbors may not exist in the mapping because num_device_qubits >=  num_logical_qubits
+    logical_neighbors = [inverse_mapping[q] for q in physical_neighbors if q in inverse_mapping]
+    return logical_neighbors
 
 
 def read_device_topology(fname: str) -> Graph:

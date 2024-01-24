@@ -10,7 +10,7 @@ from .fixed import (
     swap_decompose, cswap_decompose, ccx_decompose
 )
 from .universal import euler_decompose
-from .universal import tensor_product_decompose, abc_decompose, kak_decompose
+from .universal import tensor_product_decompose, abc_decompose, kak_decompose, can_decompose
 from .universal import qs_decompose, cu_decompose, demultiplex_pair, demultiplex_pauli
 from .cv import reck_decompose
 

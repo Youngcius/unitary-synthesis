@@ -3,29 +3,47 @@ Quantum Circuit
 """
 import io
 import re
+import os
+import uuid
+import numpy as np
+import networkx as nx
+from math import pi
 from functools import reduce
 from operator import add
 from typing import List, Tuple, Dict
-from copy import deepcopy
+from copy import deepcopy, copy
 from datetime import datetime
-import numpy as np
-import networkx as nx
+from collections import Counter
+import pydot
+from IPython.display import Image
+
 from unisys.basic import gate
 from unisys.basic.gate import Gate
-from unisys.utils.operator import tensor_slots, controlled_unitary_matrix, is_equiv_unitary
+from unisys.utils.operations import tensor_slots, controlled_unitary_matrix, is_equiv_unitary
 from unisys.utils.functions import limit_angle
 
 
 class Circuit(list):
     def __init__(self, gates: List[Gate] = None):
+        if gates is not None:
+            assert all([g.qregs for g in gates]), "Each gate should act on at specific qubit(s)"
         super().__init__(gates if gates else [])
 
+    def __hash__(self):
+        return hash(id(self))
+
     def append(self, *gates):
+        assert all([g.qregs for g in gates]), "Each gate should act on at specific qubit(s)"
         for g in gates:
             super().append(g)
 
-    def clone(self):
+    def deepclone(self):
+        """Deep duplicate"""
         return Circuit(deepcopy(self))
+
+    def clone(self):
+        """Shadow duplicate"""
+        return Circuit(copy(self))
 
     def __add__(self, other):
         return Circuit(deepcopy(self.gates) + deepcopy(other.gates))
@@ -42,6 +60,16 @@ class Circuit(list):
             raise ImportError('qiskit is not installed')
         return QuantumCircuit.from_qasm_str(self.to_qasm())
 
+    @classmethod
+    def from_qiskit(cls, qiskit_circ):
+        """Convert from qiskit.QuantumCircuit instance"""
+        try:
+            from qiskit import QuantumCircuit
+        except ImportError:
+            raise ImportError('qiskit is not installed')
+        assert isinstance(qiskit_circ, QuantumCircuit), "Input should be a qiskit.QuantumCircuit instance"
+        return cls.from_qasm(qiskit_circ.qasm())
+
     def to_cirq(self):
         """Convert to cirq.Circuit instance"""
         try:
@@ -51,7 +79,99 @@ class Circuit(list):
         return circuit_from_qasm(self.to_qasm())
 
     @classmethod
-    def from_qasm(self, qasm_str: str = None, fname: str = None):
+    def from_cirq(cls, cirq_circ):
+        """Convert from cirq.Circuit instance"""
+        try:
+            import cirq
+        except ImportError:
+            raise ImportError('cirq is not installed')
+        assert isinstance(cirq_circ, cirq.Circuit), "Input should be a cirq.Circuit instance"
+        return cls.from_qasm(cirq.qasm(cirq_circ))
+
+    def to_tket(self):
+        """Convert to pytket.circuit.Circuit instance"""
+        try:
+            from pytket.circuit import Circuit
+            from pytket.qasm import circuit_from_qasm_str
+        except ImportError:
+            raise ImportError('pytket is not installed')
+        return circuit_from_qasm_str(self.to_qasm())
+
+    @classmethod
+    def from_tket(cls, tket_circ):
+        """Convert from pytket.circuit.Circuit instance"""
+        try:
+            from pytket.circuit import Circuit
+            from pytket.qasm import circuit_to_qasm_str
+        except ImportError:
+            raise ImportError('pytket is not installed')
+        assert isinstance(tket_circ, Circuit), "Input should be a pytket.circuit.Circuit instance"
+        return cls.from_qasm(circuit_to_qasm_str(tket_circ))
+
+    def to_bqskit(self):
+        """Convert to bqskit.Circuit instance"""
+        try:
+            import bqskit
+        except ImportError:
+            raise ImportError('bqskit is not installed')
+        tmp_file = '{}.qasm'.format(uuid.uuid4())
+        self.to_qasm(fname=tmp_file)
+        bqskit_circ = bqskit.Circuit.from_file(tmp_file)
+        os.remove(tmp_file)
+        return bqskit_circ
+
+    @classmethod
+    def from_bqskit(cls, bqskit_circ):
+        """Convert from bqskit.Circuit instance"""
+        try:
+            import bqskit
+        except ImportError:
+            raise ImportError('bqskit is not installed')
+        assert isinstance(bqskit_circ, bqskit.Circuit), "Input should be a bqskit.Circuit instance"
+        tmp_file = '{}.qasm'.format(uuid.uuid4())
+        bqskit_circ.save(tmp_file)
+        with open(tmp_file, 'r') as f:
+            qasm = f.read()
+        os.remove(tmp_file)
+        return cls.from_qasm(qasm)
+
+    def to_qasm(self, fname: str = None):
+        """Convert self to QSAM string"""
+        circuit = deepcopy(self)
+        output = QASMStringIO()
+        output.write_header()
+        n = self.num_qubits_with_dummy
+
+        if 'RYY' in self.gate_stats() or 'Can' in self.gate_stats():
+            output.write_comment("Customized 'ryy' gate definitions")
+            output.write(gate.RYY_DEF)
+            output.write_line_gap(2)
+
+        if 'Can' in self.gate_stats():
+            output.write_comment("Customized 'can' gate definitions")
+            output.write(gate.CAN_DEF_BY_ISING)  # alternatively, can use "gate.CAN_DEF_BY_CNOT"
+            output.write_line_gap(2)
+
+        # no measurement, just computing gates
+        output.write_comment('Qubits: {}'.format(list(range(n))))
+        output.write_qregs(n)
+        # output.write('qreg q[{}]'.format(n))
+        output.write_line_gap()
+
+        tuples_parsed = parse_to_tuples(circuit)
+        output.write_comment('Quantum gate operations')
+        for opr, idx in tuples_parsed:
+            output.write_operation(opr, 'q', *idx)
+
+        qasm_str = output.getvalue()
+        output.close()
+        if fname is not None:
+            with open(fname, 'w') as f:
+                f.write(qasm_str)
+        return qasm_str
+
+    @classmethod
+    def from_qasm(cls, qasm_str: str = None, fname: str = None):
         """
         Convert QASM string to Circuit instance
 
@@ -75,65 +195,56 @@ class Circuit(list):
         input = io.StringIO(qasm_str)
         circ = Circuit()
         for line in input.readlines():
-            line = line.strip().strip(';')
             if (line.startswith('//') or line.startswith('OPENQASM') or line.startswith('include') or
                     line.startswith('qreg') or line.startswith('creg') or line.startswith('barrier') or
-                    line.startswith('measure') or line == ''):
+                    line.startswith('gate') or line.startswith('{') or line.startswith('}') or line.startswith('  ') or
+                    line.startswith('measure')):
+                continue
+            line = line.strip().strip(';')
+            if line == '':
                 continue
             line = re.split(r'\s*,\s*|\s+', line)  # split according to ',' or '\s+'
-            line = [re.split(r'\(|\)', s) for s in line]  # split each element according to '(' or ')
+            line = [re.split(r'\(|\)', s) for s in line]  # split each element according to '(' or ')'
             line = reduce(add, line)
             line = [s for s in line if s != '']
-            if line[0].startswith('c'):
+
+            def parse_qubit_index(s):
+                """e.g., qubits[10] --> 10; q[5] --> 5"""
+                return int(re.findall(r'\d+', s)[0])
+
+            # parse gname, tq, cq
+            if line[0].startswith('c') and line[0] != 'can':
                 gname = line[0][1:]
-                tq = int(line[-1][2:-1])
-                cq = int(line[-2][2:-1])
+                tq = parse_qubit_index(line[-1])
+                cq = parse_qubit_index(line[-2])
             else:
                 gname = line[0]
-                if gname == 'swap':
-                    tq = [int(line[-2][2:-1]), int(line[-1][2:-1])]
+                if gname in ['swap', 'rxx', 'ryy', 'rzz', 'can']:
+                    tq = [parse_qubit_index(line[-2]), parse_qubit_index(line[-1])]
                 else:
-                    tq = int(line[-1][2:-1])
+                    tq = parse_qubit_index(line[-1])
                 cq = None
+
+            if gname == 'id':
+                gname = 'i'
+
+            # create Gate instance
             if gname in gate.FIXED_GATES:
                 g = getattr(gate, gname.upper()).on(tq, cq)
-            elif gname == 'u3':
-                angles = [float(line[1][1:-1]), float(line[2][1:-1]), float(line[3][1:-1])]
-                # angles = list(map(float, line[1][1:-1].split(',')))
-                g = gate.U3(*angles).on(tq, cq)
-            elif gname in ['rx', 'ry', 'rz']:
-                # angle = float(line[1][1:-1])
-                angle = float(line[1])
+            elif gname in ['u3', 'can']:
+                angles = [eval(line[1]), eval(line[2]), eval(line[3])]
+                g = getattr(gate, gname.capitalize())(*angles).on(tq, cq)
+            elif gname == 'u2':
+                angles = [eval(line[1]), eval(line[2])]
+                g = gate.U2(*angles).on(tq, cq)
+            elif gname in ['rx', 'ry', 'rz', 'rxx', 'ryy', 'rzz', 'u1']:
+                angle = eval(line[1])
                 g = getattr(gate, gname.upper())(angle).on(tq, cq)
             else:
                 raise ValueError(f'Unsupported gate {gname}')
             circ.append(g)
 
         return circ
-
-    def to_qasm(self, fname: str = None):
-        """Convert self to QSAM string"""
-        circuit = deepcopy(self)
-        output = QASMStringIO()
-        output.write_header()
-        n = self.num_qubits_with_dummy
-
-        # no measurement, just computing gates
-        output.write_comment('Qubits: {}'.format(list(range(n))))
-        output.write('qreg q[{}]'.format(n))
-        output.write_line_gap()
-
-        tuples_parsed = parse_to_tuples(circuit)
-        output.write_comment('Quantum gate operations')
-        for opr, idx in tuples_parsed:
-            output.write_operation(opr, 'q', *idx)
-
-        qasm_str = output.getvalue()
-        output.close()
-        if fname is not None:
-            with open(fname, 'w') as f:
-                f.write(qasm_str)
-        return qasm_str
 
     def rewire(self, mapping: Dict[int, int]):
         """
@@ -151,20 +262,25 @@ class Circuit(list):
         """Inverse of the original circuit by reversing the order of gates' hermitian conjugates"""
         return Circuit([g.hermitian() for g in reversed(self)])
 
-    def unitary(self, msb: bool = False) -> np.ndarray:
+    def unitary(self, msb: bool = False, with_dummy: bool = False) -> np.ndarray:
         """
         Convert a quantum circuit to a unitary matrix.
 
         Args:
             msb (bool): if True, means the most significant bit (MSB) is on the left, i.e., little-endian representation
+            with_dummy (bool): if True, means taking dummy qubits into account when calculating the unitary matrix
 
         Returns:
             Matrix, Equivalent unitary matrix representation.
         """
         ops = []
-        # n = self.num_qubits
-        n = self.num_qubits_with_dummy
-        for g in self:
+        if with_dummy:
+            n = self.num_qubits_with_dummy
+            circ = self
+        else:
+            n = self.num_qubits
+            circ = self.rewire({p: q for p, q in zip(self.qubits, range(n))})
+        for g in circ:
             if g.n_qubits > int(np.log2(g.data.shape[0])) == 1:
                 # identical tensor-product gate expanded from single-qubit gate
                 data = reduce(np.kron, [g.data] * g.n_qubits)
@@ -186,48 +302,57 @@ class Circuit(list):
 
     def layer(self) -> List[List[Gate]]:
         """Divide a circuit into different layers"""
+        from su4compiler.utils.passes import dag_to_layers
 
-        def sort_gates_on_qreg(circuit: List[Gate], descend=False) -> List[Gate]:
-            if descend:
-                return sorted(circuit, key=lambda g: max(g.qregs))
-            else:
-                return sorted(circuit, key=lambda g: min(g.qregs))
-
-        layers = []
-        dag = self.to_dag()
-        while len(dag.nodes) > 0:
-            indices_front = _obtain_front_indices(dag)
-            layers.append([self[idx] for idx in indices_front])
-            dag.remove_nodes_from(indices_front)
-        layers = list(map(sort_gates_on_qreg, layers))
+        layers = dag_to_layers(self.to_dag())
+        layers = list(map(_sort_gates_on_qreg, layers))
         return layers
 
-    def to_dag(self) -> nx.MultiDiGraph:
+    def to_dag(self) -> nx.DiGraph:
         """Convert a circuit into a Directed Acyclic Graph (DAG) according to dependency of each gate's qubits"""
         all_gates = self.gates
-        dag = nx.MultiDiGraph()
-        dag.add_nodes_from(range(self.num_gates))
+        dag = nx.DiGraph()
+        # dag.add_nodes_from(range(self.num_gates))
+        dag.add_nodes_from(all_gates)
         while all_gates:
             g = all_gates.pop(0)
             qregs = set(g.qregs)
             for g_opt in all_gates:  # traverse the subsequent optional gates
                 qregs_opt = set(g_opt.qregs)
                 if qregs_opt & qregs:
-                    dag.add_edge(self.index(g), self.index(g_opt))
+                    # dag.add_edge(self.index(g), self.index(g_opt))
+                    dag.add_edge(g, g_opt)
                     qregs -= qregs_opt
                 if not qregs:
                     break
         return dag
 
-    def to_dag_forward(self) -> nx.MultiDiGraph:
+    def draw_circ_dag(self, fname: str = None) -> Image:
+        dag = self.to_dag()
+        dot = pydot.Dot(graph_type='digraph')
+        gate_to_node = {}
+        colors = {1: 'white', 2: 'lightblue', 3: 'lightgreen', 4: 'lightpink',
+                  5: 'lightyellow', 6: 'lightgray', 7: 'lightcyan', 8: 'lightcoral'}
+        for g in dag.nodes:
+            node = pydot.Node(hash(g), label=str(g), fillcolor=colors[g.num_qregs], style='filled')
+            gate_to_node[g] = node
+            dot.add_node(node)
+        for edge in dag.edges:
+            dot.add_edge(pydot.Edge(gate_to_node[edge[0]], gate_to_node[edge[1]]))
+        dot.set_rankdir('LR')
+        if fname:
+            dot.write_png(fname)
+        return Image(dot.create_png())
+
+    def to_dag_forward(self) -> nx.DiGraph:
         """
         Convert a circuit into a Directed Acyclic Graph (DAG) by forward traversing the circuit.
         ---
         NOTE: In comparison with the method `to_dag`, the DAG generated from this method is more compact
         """
         all_gates = self.gates
-        dag = nx.MultiDiGraph()
-        dag.add_nodes_from(range(self.num_gates))
+        dag = nx.DiGraph()
+        dag.add_nodes_from(all_gates)
         while all_gates:
             gate_front = all_gates.pop(0)
             qreg_front = set(gate_front.qregs)
@@ -236,32 +361,39 @@ class Circuit(list):
                 # judge if there is dependent relation about qubit(s) acted
                 qreg_back = set(gate_back.qregs)
                 if len(qreg_back & qreg_front) > 0 and len(qreg_back & union_set) == 0:
-                    dag.add_edge(self.index(gate_front), self.index(gate_back))
+                    # dag.add_edge(self.index(gate_front), self.index(gate_back))
+                    dag.add_edge(gate_front, gate_back)
                     union_set = union_set | qreg_back
         return dag
 
-    def to_dag_backward(self) -> nx.MultiDiGraph:
+    def to_dag_backward(self) -> nx.DiGraph:
         """
         Convert a circuit into a Directed Acyclic Graph (DAG) by backward traversing the circuit.
         ---
         NOTE: In comparison with the method `to_dag`, the DAG generated from this method is more compact
         """
         all_gates = self.gates
-        dag = nx.MultiDiGraph()
-        dag.add_nodes_from(range(self.num_gates))
+        dag = nx.DiGraph()
+        dag.add_nodes_from(all_gates)
         while all_gates:
             gate_back = all_gates.pop()
-            idx_back = len(all_gates)
+            # idx_back = len(all_gates)
             qreg_back = set(gate_back.qregs)
             union_set = set()
-            for idx_front in range(idx_back - 1, -1, -1):
-                gate_front = self[idx_front]
+            # for idx_front in range(idx_back - 1, -1, -1):
+            for gate_front in reversed(all_gates):
+                # gate_front = self[idx_front]
                 # judge if there is dependent relation about qubit(s) acted
                 qreg_front = set(gate_front.qregs)
                 if len(qreg_front & qreg_back) > 0 and len(qreg_front & union_set) == 0:
-                    dag.add_edge(idx_front, idx_back)
+                    # dag.add_edge(idx_front, idx_back)
+                    dag.add_edge(gate_front, gate_back)
                     union_set = union_set | qreg_front
         return dag
+
+    def gate_stats(self) -> Dict[str, int]:
+        """Statistics of gate names and occurring number in the circuit"""
+        return dict(sorted(Counter([g.name for g in self.gates]).items()))
 
     @property
     def gates(self, with_measure: bool = True):
@@ -274,12 +406,27 @@ class Circuit(list):
         return len(self)
 
     @property
+    def num_nonlocal_gates(self):
+        return len([g for g in self if g.num_qregs > 1])
+
+    @property
+    def depth(self):
+        """number of layers"""
+        return len(self.layer())
+
+    @property
+    def depth_nonlocal(self):
+        """number of layers including nonlocal gates"""
+        layers = self.layer()
+        return len([l for l in layers if Circuit(l).num_nonlocal_gates > 0])
+
+    @property
     def qubits(self):
         """qubits indices in the quantum circuit"""
         idx = []
         for g in self:
             idx.extend(g.qregs)
-        return list(set(idx))
+        return sorted(list(set(idx)))
 
     @property
     def num_qubits(self):
@@ -290,6 +437,11 @@ class Circuit(list):
     def num_qubits_with_dummy(self):
         """number of qubits in the quantum circuit (including dummy qubits)"""
         return max(self.qubits) + 1
+
+    @property
+    def max_gate_weight(self):
+        """maximum gate weight"""
+        return max([g.num_qregs for g in self])
 
     @property
     def with_measure(self):
@@ -308,10 +460,19 @@ class QASMStringIO(io.StringIO):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def write(self, __s: str) -> int:
-        n_content = super().write(__s)
-        n_tail = super().write(';\n')
-        return n_content + n_tail
+    # def write(self, __s: str) -> int:
+    #     n_content = super().write(__s)
+    #     n_tail = super().write(';\n')
+    #     return n_content + n_tail
+    def write_qregs(self, n: int) -> int:
+        """
+        Write quantum register declarations into the string stream.
+
+        Args:
+            n: number of qubits
+        """
+        n = super().write('qreg q[{}];\n'.format(n))
+        return n
 
     def write_operation(self, opr: str, qreg_name: str, *args) -> int:
         """
@@ -353,17 +514,6 @@ class QASMStringIO(io.StringIO):
         return n1 + n2 + n3 + n4 + n5 + n6
 
 
-def _obtain_front_indices(dag: nx.MultiDiGraph) -> List[int]:
-    """
-    Obtain node indices of the front layer of a DAG
-    """
-    front_indices = []
-    for node in dag.nodes:
-        if dag.in_degree(node) == 0:
-            front_indices.append(node)
-    return front_indices
-
-
 def parse_to_tuples(circuit: Circuit) -> List[Tuple[str, List[int]]]:
     """
     Parse each Gate instance into a tuple consisting gate name and quantum register indices of a list
@@ -376,10 +526,15 @@ def parse_to_tuples(circuit: Circuit) -> List[Tuple[str, List[int]]]:
     """
     parsed_list = []
     for g in circuit:
-        if not ((g.n_qubits == 1 and len(g.cqs) <= 1) or (
-                len(g.tqs) == 2 and len(g.cqs) <= 1 and isinstance(g, gate.SWAPGate))):
+        if not ((g.n_qubits == 1 and len(g.cqs) <= 1) or
+                (len(g.tqs) == 2 and len(g.cqs) <= 1 and isinstance(g, gate.SWAPGate)) or
+                (len(g.tqs) == 2 and len(g.cqs) == 0 and isinstance(g, (gate.RXX, gate.RYY, gate.RZZ, gate.Can)))):
             raise ValueError('Only support 1Q or 2Q gates with designated qubits')
-        gname = g.name.lower()
+
+        if g.name == 'I':
+            gname = 'id'
+        else:
+            gname = g.name.lower()
 
         if g.cqs:
             if gname not in gate.CONTROLLABLE_GATES:
@@ -388,19 +543,32 @@ def parse_to_tuples(circuit: Circuit) -> List[Tuple[str, List[int]]]:
                 opr = 'c{}'.format(gname)
             elif gname == 'u3':
                 angles = list(map(limit_angle, g.angles))
-                opr = 'cu3({:.2f}, {:.2f}, {:.2f})'.format(*angles)
-            else:  # CR(X/Y/Z) gate
+                factors = list(map(lambda x: x / pi, angles))
+                # opr = 'cu3({:.4f}, {:.4f}, {:.4f})'.format(*angles)
+                opr = 'cu3({}*pi, {}*pi, {}*pi)'.format(*factors)
+            elif gname == 'u2':
+                angles = list(map(limit_angle, g.angles))
+                factors = list(map(lambda x: x / pi, angles))
+                opr = 'cu2({}*pi, {}*pi)'.format(*factors)
+            else:  # CR(X/Y/Z) and U1 gate
                 angle = limit_angle(g.angle)
-                opr = 'c{}({:.2f})'.format(gname, angle)
+                factor = angle / pi
+                opr = 'c{}({}*pi)'.format(gname, factor)
         else:
             if gname in gate.FIXED_GATES:
                 opr = gname
-            elif gname == 'u3':
+            elif gname in ['u3', 'can']:
                 angles = list(map(limit_angle, g.angles))
-                opr = '{}({:.2f}, {:.2f}, {:.2f})'.format(gname, *angles)
-            else:  # R(X/Y/Z) gate
+                factors = list(map(lambda x: x / pi, angles))
+                opr = '{}({}*pi, {}*pi, {}*pi)'.format(gname, *factors)
+            elif gname == 'u2':
+                angles = list(map(limit_angle, g.angles))
+                factors = list(map(lambda x: x / pi, angles))
+                opr = '{}({}*pi, {}*pi)'.format(gname, *factors)
+            else:  # R(X/Y/Z), R(XX/YY/ZZ), U1
                 angle = limit_angle(g.angle)
-                opr = '{}({:.2f})'.format(gname, angle)
+                factor = angle / pi
+                opr = '{}({}*pi)'.format(gname, factor)
         parsed_list.append((opr, g.qregs))
     return parsed_list
 
@@ -418,6 +586,13 @@ def optimize_circuit(circuit: Circuit) -> Circuit:
     """
     circuit_opt = Circuit()
     for g in circuit:
-        if not is_equiv_unitary(g.data, gate.I.data):
+        if not (g.num_qregs == 1 and is_equiv_unitary(g.data, gate.I.data)):
             circuit_opt.append(g)
     return circuit_opt
+
+
+def _sort_gates_on_qreg(circuit: List[Gate], descend=False) -> List[Gate]:
+    if descend:
+        return sorted(circuit, key=lambda g: max(g.qregs))
+    else:
+        return sorted(circuit, key=lambda g: min(g.qregs))

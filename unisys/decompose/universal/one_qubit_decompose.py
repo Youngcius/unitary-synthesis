@@ -1,7 +1,7 @@
 """One-qubit gate decomposition"""
 
 from unisys.basic import Gate, Circuit, gate
-from unisys.utils.operator import params_zyz, params_u3
+from unisys.utils.operations import params_zyz, params_u3
 
 OPTIONAL_BASIS = ['zyz', 'u3']
 

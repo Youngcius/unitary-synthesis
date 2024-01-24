@@ -3,16 +3,19 @@ def assert_equivalent_unitary(U, V):
         import cirq
         cirq.testing.assert_allclose_up_to_global_phase(U, V, atol=1e-5)
     except ModuleNotFoundError:
-        from unisys.utils.operator import is_equiv_unitary
+        from unisys.utils.operations import is_equiv_unitary
         assert is_equiv_unitary(U, V)
 
 
 def ceshi_decompose(g, decomp_func):
-    from unisys.utils.operator import tensor_slots, controlled_unitary_matrix
+    from unisys.utils.operations import tensor_slots, controlled_unitary_matrix
     from functools import reduce
     import numpy as np
 
-    n = max(g.tqs + g.cqs) + 1
+    n = g.num_qregs
+    qregs_sorted = sorted(g.qregs)
+    qregs_rewiring = {p: q for p, q in zip(qregs_sorted, range(n))}
+    qregs_rewired = [qregs_rewiring[q] for q in g.qregs]
 
     if g.n_qubits > int(np.log2(g.data.shape[0])) == 1:
         data = reduce(np.kron, [g.data] * g.n_qubits)
@@ -21,12 +24,13 @@ def ceshi_decompose(g, decomp_func):
 
     if g.cqs:
         U = controlled_unitary_matrix(data, len(g.cqs))
-        U = tensor_slots(U, n, g.cqs + g.tqs)
+        U = tensor_slots(U, n, qregs_rewired)
     else:
-        U = tensor_slots(data, n, g.tqs)
+        U = tensor_slots(data, n, qregs_rewired)
 
     circ = decomp_func(g)
     print(circ)
+    print(circ.qubits)
     assert_equivalent_unitary(U, circ.unitary())
 
 

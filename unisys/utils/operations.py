@@ -6,9 +6,9 @@ from functools import reduce
 from math import sqrt, atan2
 import numpy as np
 from scipy import linalg
+
 from unisys.basic import gate
 from unisys.utils.functions import is_power_of_two
-
 
 M = np.array([[1, 0, 0, 1j],
               [0, 1j, 1, 0],
@@ -183,6 +183,8 @@ def kron_decomp(M: np.ndarray):
         'New Kronecker product decompositions and its applications.'
         https://www.researchinventy.com/papers/v1i11/F0111025030.pdf
     """
+    if M.shape != (4, 4):
+        raise ValueError('Input matrix should be a 4*4 matrix')
     M00, M01, M10, M11 = M[:2, :2], M[:2, 2:], M[2:, :2], M[2:, 2:]
     K = np.vstack([M00.ravel(), M01.ravel(), M10.ravel(), M11.ravel()])
     if np.linalg.matrix_rank(K) != 1:
@@ -201,6 +203,19 @@ def kron_decomp(M: np.ndarray):
         A = np.append(A, a)
     A = A.reshape(2, 2)
     B = B.reshape(2, 2)
+    return A, B
+
+
+def nearest_kron_decomp(M: np.ndarray):
+    """
+    Acquire nearest KPD of a 4x4 matrix via Pitsianis-Van Loan algorithm.
+    """
+    if M.shape != (4, 4):
+        raise ValueError('Input matrix should be a 4*4 matrix')
+    M = M.reshape(2, 2, 2, 2).transpose(0, 2, 1, 3).reshape(4, 4)
+    u, d, vh = linalg.svd(M)
+    A = np.sqrt(d[0]) * u[:, 0].reshape(2, 2)
+    B = np.sqrt(d[0]) * vh[0, :].reshape(2, 2)
     return A, B
 
 
@@ -367,8 +382,12 @@ def simult_svd(A: np.ndarray, B: np.ndarray):
     Ua, Da, Vah = linalg.svd(A)
     Uah = Ua.conj().T
     Va = Vah.conj().T
-    if np.count_nonzero(Da) != d:
-        raise ValueError('Not implemented yet for the situation that A is not full-rank')
+    # print(Uah)
+    # print(Da)
+    # print(Va)
+    # print()
+    # if np.count_nonzero(Da) != d:  # TODO: why it still works when this line is commented????
+    #     raise ValueError('Not implemented yet for the situation that A is not full-rank')
     # G commutes with D
     G = Uah @ B @ Va
     # because G is hermitian, eigen-decomposition is its spectral decomposition

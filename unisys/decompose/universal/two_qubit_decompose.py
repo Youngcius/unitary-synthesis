@@ -3,13 +3,14 @@
 from math import sqrt, pi
 import numpy as np
 from scipy import linalg
+
 from unisys.basic import gate, Gate, Circuit
 from unisys.basic.circuit import optimize_circuit
 from unisys.decompose.fixed.pauli_related import crx_decompose, cry_decompose, crz_decompose
-from unisys.utils.operator import M, M_DAG, A
-from unisys.utils.operator import params_abc, params_zyz, params_u3
-from unisys.utils.operator import kron_decomp, is_tensor_prod, kron_factor_4x4_to_2x2s
-from unisys.utils.operator import remove_glob_phase, simult_svd
+from unisys.utils.operations import M, M_DAG, A
+from unisys.utils.operations import params_abc, params_zyz, params_u3
+from unisys.utils.operations import kron_decomp, is_tensor_prod, kron_factor_4x4_to_2x2s
+from unisys.utils.operations import remove_glob_phase, simult_svd
 
 
 def tensor_product_decompose(g: Gate, return_u3: bool = True) -> Circuit:
@@ -27,6 +28,7 @@ def tensor_product_decompose(g: Gate, return_u3: bool = True) -> Circuit:
         raise ValueError(f'{g} is not a 2-qubit gate with designated qubits')
     if not is_tensor_prod(g.data):
         raise ValueError(f'{g} is not a tensor-product unitary gate.')
+
     u0, u1 = kron_decomp(g.data)
     circ = Circuit()
     if return_u3:
@@ -180,6 +182,51 @@ def kak_decompose(g: Gate, return_u3: bool = True) -> Circuit:
             gate.X.on(idx2, idx1),
             gate.UnivGate(rots1[3], 'W0').on(idx1),
             gate.UnivGate(rots2[3], 'W1').on(idx2)
+        )
+
+    return optimize_circuit(circ)
+
+
+def can_decompose(g: Gate, return_u3: bool = True) -> Circuit:
+    """
+    Similar to KAK decomposition, but returning Canonical with single-qubit gates.
+    """
+    if len(g.tqs) != 2 or g.cqs:
+        raise ValueError(f'{g} is not an arbitrary 2-qubit gate with designated qubits')
+
+    # construct a new matrix replacing U
+    u_su4 = M_DAG @ remove_glob_phase(g.data) @ M  # ensure the decomposed object is in SU(4)
+    ur = np.real(u_su4)  # real part of u_su4
+    ui = np.imag(u_su4)  # imagine part of u_su4
+
+    # simultaneous SVD decomposition
+    (q_left, q_right), (dr, di) = simult_svd(ur, ui)
+    d = dr + 1j * di
+
+    _, a0, a1 = kron_factor_4x4_to_2x2s(M @ q_left @ M_DAG)
+    _, b0, b1 = kron_factor_4x4_to_2x2s(M @ q_right.T @ M_DAG)
+
+    k = linalg.inv(A) @ np.angle(np.diag(d))
+    # t1, t2, t3 = - k[1:] * 2 / np.pi
+    theta1, theta2, theta3 = - k[1:] * 2
+    circ = Circuit()
+    if return_u3:
+        circ.append(
+            gate.U3(*params_u3(b0)).on(g.tqs[0]),
+            gate.U3(*params_u3(b1)).on(g.tqs[1]),
+            # gate.Can(t1, t2, t3).on(g.tqs),
+            gate.Can(theta1, theta2, theta3).on(g.tqs),
+            gate.U3(*params_u3(a0)).on(g.tqs[0]),
+            gate.U3(*params_u3(a1)).on(g.tqs[1]),
+        )
+    else:
+        circ.append(
+            gate.UnivGate(b0, 'B0').on(g.tqs[0]),
+            gate.UnivGate(b1, 'B1').on(g.tqs[1]),
+            # gate.Can(t1, t2, t3).on(g.tqs),
+            gate.Can(theta1, theta2, theta3).on(g.tqs),
+            gate.UnivGate(a0, 'A0').on(g.tqs[0]),
+            gate.UnivGate(a1, 'A1').on(g.tqs[1]),
         )
 
     return optimize_circuit(circ)

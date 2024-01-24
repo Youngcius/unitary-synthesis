@@ -10,8 +10,9 @@ from networkx import Graph
 from numpy import ndarray
 from unisys import Gate, Circuit
 from unisys.basic.gate import SWAPGate
-from unisys.utils.arch import gene_init_mapping, is_executable, update_mapping, has_decomposed_completely
+from unisys.utils.arch import gene_init_mapping, is_executable, update_mapping
 from unisys.utils.arch import unify_mapped_circuit
+from unisys.utils.passes import obtain_front_layer
 
 from rich.console import Console
 
@@ -68,7 +69,7 @@ def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, 
         Initial mapping from logical to physical qubits
         Final mapping from logical to physical qubits
     """
-    assert has_decomposed_completely(circ), "The input circuit should be decomposed into 1Q + 2Q gates completely"
+    assert _has_decomposed_completely(circ), "The input circuit should be decomposed into 1Q + 2Q gates completely"
     dag = circ.to_dag()
     print('dag nodes:', dag.nodes)
     mappings = []
@@ -76,7 +77,8 @@ def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, 
     decay_step = 0.001
 
     # find the front layer first
-    front_layer = obtain_front_layer(dag, circ)
+    # front_layer = obtain_front_layer(dag, circ)
+    front_layer = obtain_front_layer(dag)
 
     # begin SWAP searching until front_layer is empty
     dist_mat = nx.floyd_warshall_numpy(device)
@@ -105,9 +107,11 @@ def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, 
 
         if exe_gates:  # update front_layer and continue the loop
             for g in exe_gates:
-                dag.remove_node(circ.index(g))
+                # dag.remove_node(circ.index(g))
+                dag.remove_node(g)
                 circ_with_swaps.append(g)
-            front_layer = obtain_front_layer(dag, circ)
+            # front_layer = obtain_front_layer(dag, circ)
+            front_layer = obtain_front_layer(dag)
         else:  # find suitable SWAP gates
             # reset decay_params each 5 rounds
             num_searches += 1
@@ -138,13 +142,13 @@ def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, 
     return unify_mapped_circuit(circ_with_swaps, mappings), mappings[0], mappings[-1]
 
 
-def obtain_front_layer(dag: nx.MultiDiGraph, circ: Circuit) -> List[Gate]:
-    """Obtain front layer (with in_degree == 0) of the DAG"""
-    front_layer = []
-    for node in dag.nodes:
-        if dag.in_degree(node) == 0:
-            front_layer.append(circ[node])
-    return front_layer
+# def obtain_front_layer(dag: nx.MultiDiGraph, circ: Circuit) -> List[Gate]:
+#     """Obtain front layer (with in_degree == 0) of the DAG"""
+#     front_layer = []
+#     for node in dag.nodes:
+#         if dag.in_degree(node) == 0:
+#             front_layer.append(circ[node])
+#     return front_layer
 
 
 def obtain_logical_neighbors(qubit: int, mapping: Dict[int, int], device: Graph) -> List[int]:
@@ -176,10 +180,12 @@ def heuristic_score(front_layer: List[Gate], dag: nx.MultiDiGraph, circ: Circuit
     succeeding_layer = set()
     succeeding_weight = 0.5
     for g in front_layer:
-        for successor in dag.successors(circ.index(g)):
+        # for successor in dag.successors(circ.index(g)):
+        for successor in dag.successors(g):
             # print('{} --> {}'.format(g, circ[successor]))
             if len(succeeding_layer) < 20:
-                succeeding_layer.add(circ[successor])
+                # succeeding_layer.add(circ[successor])
+                succeeding_layer.add(successor)
     succeeding_layer = list(succeeding_layer)
     mapping = update_mapping(mapping, swap)  # update mapping after an acted SWAP gate
     # NOTE: only consider 2Q gates for calculating the heuristic score
@@ -197,3 +203,12 @@ def heuristic_score(front_layer: List[Gate], dag: nx.MultiDiGraph, circ: Circuit
     #       max(decay_params[swap.tqs[0]], decay_params[swap.tqs[1]]) * (s1 + succeeding_weight * s2))
     # print('decay_params:', decay_params)
     return max(decay_params[swap.tqs[0]], decay_params[swap.tqs[1]]) * (s1 + succeeding_weight * s2)
+
+def _has_decomposed_completely(circ: Circuit):
+    """
+    Distinguish whether the circuit has been decomposed into "1Q + 2Q" gates completely but without SWAP gates
+    """
+    for g in circ:
+        if len(g.qregs) > 2 or isinstance(g, SWAPGate):
+            return False
+    return True

@@ -1,12 +1,12 @@
 """
-Simple standard single-qubit gates and two-qubit gates
+Quantum Gate
 """
+import numpy as np
 from typing import List, Union
 from math import pi
-import numpy as np
 from scipy import linalg
 from numpy import exp, sin, cos, sqrt
-from copy import deepcopy
+from copy import copy
 from unisys.utils.functions import is_power_of_two
 
 
@@ -30,17 +30,17 @@ class Gate:
         self.n_qubits = int(np.log2(data.shape[0]))  # initial n_qubits is defined by data.shape
         self.data = data.astype(complex)
 
-        # parameters for transforming to QSAM
-        kwargs.setdefault('angle', None)
-        kwargs.setdefault('angles', None)
-        self.angle = kwargs['angle']
-        self.angles = kwargs['angles']
+        # parameters for transforming to QASM
+        self.angle = kwargs.get('angle', None)
+        self.angles = kwargs.get('angles', None)
+        self.params = kwargs.get('params', None)
+        self.exponent = kwargs.get('exponent', None)
 
     def __hash__(self):
         return hash(id(self))
 
-    def clone(self):
-        return deepcopy(self)
+    def copy(self):
+        return copy(self)
 
     def on(self, tqs: Union[List[int], int], cqs: Union[List[int], int] = None):
         """
@@ -52,7 +52,7 @@ class Gate:
 
         Returns: Quantum Gate with operated qubit indices.
         """
-        g = deepcopy(self)
+        g = self.copy()
         tqs = [tqs] if isinstance(tqs, int) else tqs
         cqs = [cqs] if isinstance(cqs, int) else cqs
         if isinstance(g, UnivGate) and len(tqs) != g.n_qubits:
@@ -71,19 +71,35 @@ class Gate:
     def __call__(self, *args, **kwargs):
         return self.on(*args, **kwargs)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        prefix = self.name
+        if self.angle:
+            prefix += '({:.2f}π)'.format(self.angle / pi)
+        elif self.angles:
+            prefix += '({})'.format(','.join(['{:.2f}π'.format(a / pi) for a in self.angles]))
+        elif self.params:
+            prefix += '({})'.format(','.join([str(p) for p in self.params]))
+        elif self.exponent:
+            prefix += '({})'.format(self.exponent)
+
+        tqs_str = str(self._targ_qubits[0]) if len(self._targ_qubits) == 1 else '|'.join(
+            [str(tq) for tq in self._targ_qubits])
+        cqs_str = str(self._ctrl_qubits[0]) if len(self._ctrl_qubits) == 1 else '|'.join(
+            [str(cq) for cq in self._ctrl_qubits])
+        if not self._targ_qubits:
+            return prefix
         if not self._ctrl_qubits:
-            return '{}: targ {}'.format(self.name, self._targ_qubits)
-        return '{}: targ {} | ctrl {}'.format(self.name, self._targ_qubits, self._ctrl_qubits)
+            return '{}{{{}}}'.format(prefix, tqs_str)
+        return '{}{{{}←{}}}'.format(prefix, tqs_str, cqs_str)
 
     def math_repr(self):
-        tqs_str = str(self._targ_qubits[0]) if len(self._targ_qubits) == 1 else ','.join(
+        tqs_str = str(self._targ_qubits[0]) if len(self._targ_qubits) == 1 else '|'.join(
             [str(tq) for tq in self._targ_qubits])
-        cqs_str = str(self._ctrl_qubits[0]) if len(self._ctrl_qubits) == 1 else ','.join(
+        cqs_str = str(self._ctrl_qubits[0]) if len(self._ctrl_qubits) == 1 else '|'.join(
             [str(cq) for cq in self._ctrl_qubits])
         if not self._ctrl_qubits:
             return '${}_{{{}}}$'.format(self.name, tqs_str)
-        return '${}_{{{}}}^{{{}}}$'.format(self.name, tqs_str, cqs_str)
+        return '${}_{{{}←{}}}$'.format(self.name, tqs_str, cqs_str)
 
     @property
     def tq(self):
@@ -113,13 +129,18 @@ class Gate:
     def qregs(self):
         return self._targ_qubits if not self._ctrl_qubits else self._ctrl_qubits + self._targ_qubits
 
+    @property
+    def num_qregs(self):
+        """Number of qubits operated by the gate (both target and control qubits)"""
+        return len(self.qregs)
+
     def hermitian(self):
         """
         Hermitian conjugate of the origin gate
 
         Returns: a new Gate instance
         """
-        g = deepcopy(self)
+        g = self.copy()
         g.data = g.data.conj().T
 
         t_names = ('T', 'TDG')
@@ -250,7 +271,8 @@ class XPow(Gate):
     """X power gate"""
 
     def __init__(self, exponent, *args, **kwargs):
-        super().__init__(linalg.expm(-1j * exponent * pi / 2 * (X.data - I.data)), name='XPow', *args, **kwargs)
+        super().__init__(linalg.expm(-1j * exponent * pi / 2 * (X.data - I.data)), name='XPow', exponent=exponent,
+                         *args, **kwargs)
         assert np.allclose(self.data, np.exp(1j * exponent * pi / 2) * RX(pi * exponent).data)
 
 
@@ -258,7 +280,8 @@ class YPow(Gate):
     """Y power gate"""
 
     def __init__(self, exponent, *args, **kwargs):
-        super().__init__(linalg.expm(-1j * exponent * pi / 2 * (Y.data - I.data)), name='YPow', *args, **kwargs)
+        super().__init__(linalg.expm(-1j * exponent * pi / 2 * (Y.data - I.data)), name='YPow', exponent=exponent,
+                         *args, **kwargs)
         assert np.allclose(self.data, np.exp(1j * exponent * pi / 2) * RY(pi * exponent).data)
 
 
@@ -266,19 +289,78 @@ class ZPow(Gate):
     """Z power gate"""
 
     def __init__(self, exponent, *args, **kwargs):
-        super().__init__(linalg.expm(-1j * exponent * pi / 2 * (Z.data - I.data)), name='ZPow', *args, **kwargs)
+        super().__init__(linalg.expm(-1j * exponent * pi / 2 * (Z.data - I.data)), name='ZPow', exponent=exponent,
+                         *args, **kwargs)
         assert np.allclose(self.data, np.exp(1j * exponent * pi / 2) * RZ(pi * exponent).data)
 
 
+class U1(Gate):
+    """U1 gate"""
+
+    def __init__(self, lamda, *args, **kwargs):
+        super().__init__(np.array([[1. + 0., 0. + 0.],
+                                   [0. + 0., np.exp(1j * lamda)]]), name='U1', angle=lamda, *args, **kwargs)
+
+
+class U2(Gate):
+    """U2 gate"""
+
+    def __init__(self, phi, lamda, *args, **kwargs):
+        super().__init__(np.array([[1, - exp(1j * lamda)],
+                                   [exp(1j * phi), exp(1j * (phi + lamda))]]) / sqrt(2),
+                         name='U2', angles=(phi, lamda), *args, **kwargs)
+
+
 class U3(Gate):
-    """
-    U3 gate
-    """
+    """U3 gate"""
 
     def __init__(self, theta, phi, lamda, *args, **kwargs):
         super().__init__(np.array([[cos(theta / 2), -exp(1j * lamda) * sin(theta / 2)],
                                    [exp(1j * phi) * sin(theta / 2), exp(1j * (phi + lamda)) * cos(theta / 2)]]),
                          name='U3', angles=(theta, phi, lamda), *args, **kwargs)
+
+
+class RXX(Gate):
+    def __init__(self, theta, *args, **kwargs):
+        super().__init__(linalg.expm(-1j * theta / 2 * np.kron(X.data, X.data)), name='RXX', angle=theta, *args,
+                         **kwargs)
+
+
+class RYY(Gate):
+    def __init__(self, theta, *args, **kwargs):
+        super().__init__(linalg.expm(-1j * theta / 2 * np.kron(Y.data, Y.data)), name='RYY', angle=theta, *args,
+                         **kwargs)
+
+
+class RZZ(Gate):
+    def __init__(self, theta, *args, **kwargs):
+        super().__init__(linalg.expm(-1j * theta / 2 * np.kron(Z.data, Z.data)), name='RZZ', angle=theta, *args,
+                         **kwargs)
+
+
+class WeylGate(Gate):
+    r"""
+    Canonical gate with respect to Weyl chamber
+
+    .. math::
+        \textrm{Can}(\theta_1, \theta_2, \theta_3) = e^{- i \frac{1}{2}(\theta_1 XX + \theta_2 YY + \theta_3 ZZ)}
+
+    Or
+
+    .. math::
+        \textrm{Can}(t_1, t_2, t_3) = e^{- i \frac{\pi}{2}(t_1 XX + t_2 YY + t_3 ZZ)}
+    """
+
+    def __init__(self, theta1, theta2, theta3, *args, **kwargs):
+        super().__init__(linalg.expm(-1j / 2 * (theta1 * np.kron(X.data, X.data) +
+                                                theta2 * np.kron(Y.data, Y.data) +
+                                                theta3 * np.kron(Z.data, Z.data))),
+                         name='Can', angles=(theta1, theta2, theta3), *args, **kwargs)
+    # def __init__(self, t1, t2, t3, *args, **kwargs):
+    #     super().__init__(linalg.expm(-1j * pi / 2 * (t1 * np.kron(X.data, X.data) +
+    #                                                  t2 * np.kron(Y.data, Y.data) +
+    #                                                  t3 * np.kron(Z.data, Z.data))),
+    #                      name='Can', params=(t1, t2, t3), *args, **kwargs)
 
 
 # Non-operation Gate
@@ -305,8 +387,38 @@ H = HGate()
 SWAP = SWAPGate()
 ISWAP = ISWAPGate()
 
-ROTATION_GATES = ['rx', 'ry', 'rz', 'u3']
-FIXED_GATES = ['x', 'y', 'z', 'i', 'h', 's', 't', 'sdg', 'tdg', 'cx', 'cz', 'swap', 'ch']
+Can = WeylGate  # its alias: Canonical gate
+
+ROTATION_GATES = ['rx', 'ry', 'rz', 'u1', 'u2' 'u3', 'rxx', 'ryy', 'rzz', 'can']
+FIXED_GATES = ['x', 'y', 'z', 'i', 'id', 'h', 's', 't', 'sdg', 'tdg', 'cx', 'cz', 'swap', 'ch']
 CONTROLLABLE_GATES = ['x', 'y', 'z', 'h', 'swap', 'rx', 'ry', 'rz', 'u3']
 HERMITIAN_GATES = ['x', 'y', 'z', 'h', 'swap']
-READABLE_GATES = ['x', 'y', 'z', 'rx', 'ry', 'rz', 'swap', '']
+# READABLE_GATES = ['x', 'y', 'z', 'rx', 'ry', 'rz', 'swap']
+
+RYY_DEF = """gate ryy(param0) q0,q1 {
+    rx(pi/2) q0; 
+    rx(pi/2) q1; 
+    cx q0, q1; 
+    rz(param0) q1;
+    cx q0, q1; 
+    rx(-pi/2) q0;
+    rx(-pi/2) q1;
+}"""
+
+CAN_DEF_BY_CNOT = """gate can (param0, param1, param2) q0,q1 {
+    u3(1.5*pi, 0.0, 1.5*pi) q0;
+    u3(0.5*pi, 1.5*pi, 0.5*pi) q1;
+    cx q0, q1;
+    u3(1.5*pi, param0 + pi, 0.5*pi) q0;
+    u3(pi, 0.0, param1 + pi) q1;
+    cx q0, q1;
+    u3(0.5*pi, 0.0, 0.5*pi) q0;
+    u3(0.0, 1.5*pi, param2 + 0.5*pi) q1;
+    cx q0, q1;
+}"""
+
+CAN_DEF_BY_ISING = """gate can (param0, param1, param2) q0,q1 {
+    rxx(param0) q0, q1;
+    ryy(param1) q0, q1;
+    rzz(param2) q0, q1;
+}"""
