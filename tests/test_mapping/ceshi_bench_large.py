@@ -1,4 +1,10 @@
 # NOTE: this test sets consumes a lot of time
+
+"""
+These benchmarks are from https://github.com/vishal929/qubitMapper, 
+which are originally from https://github.com/CQCL/tket_benchmarking and other benchmarking suites.
+"""
+
 import os
 from unisys import Circuit
 from unisys.utils import arch
