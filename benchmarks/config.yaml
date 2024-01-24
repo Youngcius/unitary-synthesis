@@ -1,0 +1,32 @@
+
+circ_dpaths: 
+  - 3q_gate
+  - alu
+  - bit_adder
+  - comparator
+  - decode
+  - grover
+  - ham
+  - ising
+  - mcx
+  - modulo
+  - mult
+  - pf
+  - qaoa
+  - qft
+  - random
+  - ripple_adder
+  - square
+  # - sym
+  - uccsd
+  - vqe_uccsd
+  # - urf
+
+chem_circ_dpaths:
+  - pf
+  - uccsd
+  - vqe_uccsd
+
+#skip: 10000  # if num_2q_gates > skip, skip that circuit
+
+

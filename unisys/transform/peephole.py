@@ -1,0 +1,3 @@
+"""
+Peephole compiling optimization
+"""

@@ -302,7 +302,7 @@ class Circuit(list):
 
     def layer(self) -> List[List[Gate]]:
         """Divide a circuit into different layers"""
-        from su4compiler.utils.passes import dag_to_layers
+        from unisys.utils.passes import dag_to_layers
 
         layers = dag_to_layers(self.to_dag())
         layers = list(map(_sort_gates_on_qreg, layers))

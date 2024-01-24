@@ -8,7 +8,7 @@ import networkx as nx
 
 console = console.Console()
 
-large_circ_path = '../../benchmark/circuit/large'
+large_circ_path = '../../benchmarks/large'
 fnames = os.listdir(large_circ_path)
 fnames = [os.path.join(large_circ_path, fname) for fname in fnames]
 
