@@ -27,6 +27,8 @@ def test_hierarchy_grain_3():
     )
 
 
+test_hierarchy_grain_3()
+
 # def test_hierarchy_grain_4():
 #     """
 #     Test hierarchical synthesis with grain=4 on vqe_uccsd_4.qasm

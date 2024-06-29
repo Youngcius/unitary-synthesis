@@ -1,13 +1,17 @@
 """
 Operator-related Utils functions
 """
-from typing import List
+from typing import List, Union, Tuple, Optional
 from functools import reduce
 from math import sqrt, atan2
-import numpy as np
 from scipy import linalg
 
+import numpy as np
+import qfactor
+from scipy.stats import unitary_group
+
 from unisys.basic import gate
+from unisys.basic.gate import Gate, UnivGate
 from unisys.utils.functions import is_power_of_two
 
 M = np.array([[1, 0, 0, 1j],
@@ -72,7 +76,7 @@ def tensor_slots(U: np.ndarray, n: int, indices: List[int]) -> np.ndarray:
         return res.transpose(idx.tolist() + idx_latter).reshape(2 ** n, 2 ** n)
 
 
-def times_two_matrix(U: np.ndarray, V: np.ndarray):
+def times_two_matrix(U: np.ndarray, V: np.ndarray) -> Optional[np.ndarray]:
     """Calculate the coefficient a, s.t., U = a V. If a does not exist, return None."""
     assert U.shape == V.shape, "input matrices should have the same dimension"
     idx1 = np.flatnonzero(U.round(6))  # cut to some precision
@@ -107,7 +111,7 @@ def is_equiv_unitary(U: np.ndarray, V: np.ndarray) -> bool:
         return False
 
 
-def so4_to_magic_su2s(U: np.ndarray):
+def so4_to_magic_su2s(U: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     Decompose 1 SO(4) operator into 2 SU(2) operators with Magic matrix transformation: U = Mdag @ kron(A, B) @ M.
 
@@ -130,7 +134,7 @@ def is_so4(U: np.ndarray) -> bool:
     return np.allclose(U @ U.conj().T, np.identity(4)) and np.allclose(linalg.det(U), 1)
 
 
-def kron_factor_4x4_to_2x2s(U: np.ndarray):
+def kron_factor_4x4_to_2x2s(U: np.ndarray) -> Tuple[float, np.ndarray, np.ndarray]:
     """
     Splits a 4x4 matrix U = kron(A, B) into A, B, and a global factor.
     Requires the matrix to be the kronecker product of two 2x2 unitaries.
@@ -172,7 +176,7 @@ def kron_factor_4x4_to_2x2s(U: np.ndarray):
     return g, V1, V2
 
 
-def kron_decomp(M: np.ndarray):
+def kron_decomp(M: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     Kronecker product decomposition (KPD) algorithm for 4x4 4*4 matrix.
 
@@ -206,7 +210,7 @@ def kron_decomp(M: np.ndarray):
     return A, B
 
 
-def nearest_kron_decomp(M: np.ndarray):
+def nearest_kron_decomp(M: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     Acquire nearest KPD of a 4x4 matrix via Pitsianis-Van Loan algorithm.
     """
@@ -227,7 +231,7 @@ def is_tensor_prod(U: np.ndarray) -> bool:
     return True
 
 
-def params_zyz(U: np.ndarray):
+def params_zyz(U: np.ndarray) -> Tuple[float, Tuple[float, float, float]]:
     r"""
     ZYZ decomposition of a 2x2 unitary matrix.
 
@@ -254,7 +258,8 @@ def params_zyz(U: np.ndarray):
     return alpha, (theta, phi, lam)
 
 
-def params_u3(U: np.ndarray, return_phase=False):
+def params_u3(U: np.ndarray, return_phase=False) -> Union[
+    Tuple[float, float, float, float], Tuple[float, Tuple[float, float, float]]]:
     r"""
     Obtain the U3 parameters of a 2x2 unitary matrix.
 
@@ -275,7 +280,7 @@ def params_u3(U: np.ndarray, return_phase=False):
     return theta, phi, lam
 
 
-def params_abc(U: np.ndarray):
+def params_abc(U: np.ndarray) -> Tuple[float, Tuple[np.ndarray, np.ndarray, np.ndarray]]:
     r"""
     ABC decomposition of 2*2 unitary operator.
 
@@ -355,7 +360,7 @@ def remove_glob_phase(U: np.ndarray) -> np.ndarray:
     return U * np.exp(- 1j * alpha)
 
 
-def simult_svd(A: np.ndarray, B: np.ndarray):
+def simult_svd(A: np.ndarray, B: np.ndarray) -> Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]:
     r"""
     Simultaneous SVD of two matrices, based on Eckart-Young theorem.
 
@@ -435,3 +440,58 @@ def multiplexor_matrix(n: int, tq: int, *args) -> np.ndarray:
     U = U.reshape([2] * 2 * n)
     U = U.transpose(qubits + [q + n for q in qubits]).reshape(2 ** n, 2 ** n)
     return U
+
+
+def circuit_to_unitary(circ, backend=None) -> np.ndarray:
+    if backend is None:
+        return circ.unitary()
+    elif backend == 'qiskit':
+        from qiskit.quantum_info import Operator
+        circ_qiskit = circ.to_qiskit().reverse_bits()
+        return Operator(circ_qiskit).to_matrix()
+    elif backend == 'cirq':
+        import cirq
+        return cirq.unitary(circ.to_cirq())
+    else:
+        raise ValueError("Unsupported backend {}".format(backend))
+
+
+def approximately_commutative(g1: Gate, g2: Gate) -> Union[bool, Tuple[Gate, Gate]]:
+    """Distinguish if two SU(4) gates can exchange their order by numerical approximation"""
+    assert g1.num_qregs == 2 and g2.num_qregs == 2 and len(g1.tqs) == 2 and len(g2.tqs) == 2, "Input must be 2 SU(4)s"
+    assert len(set(g1.tqs) & set(g2.tqs)) == 1, "Two SU(4)s must have one qubit commonly acted on"
+
+    q0 = list(set(g1.tqs) - set(g2.tqs))[0]
+    q1 = list(set(g1.tqs) & set(g2.tqs))[0]
+    q2 = list(set(g2.tqs) - set(g1.tqs))[0]
+
+    target = np.eye(8)
+
+    if q0 > q1:
+        # original g1.tqs is [q1, q0], need to reverse the order
+        target = tensor_slots(g1.data, 3, [1, 0]) @ target
+    else:
+        target = tensor_slots(g1.data, 3, [0, 1]) @ target
+
+    if q1 > q2:
+        # original g2.tqs is [q2, q1], need to reverse the order
+        target = tensor_slots(g2.data, 3, [2, 1]) @ target
+    else:
+        target = tensor_slots(g2.data, 3, [1, 2]) @ target
+
+    approx_circ = [
+        qfactor.Gate(unitary_group.rvs(4), (1, 2)),
+        qfactor.Gate(unitary_group.rvs(4), (0, 1)),
+    ]
+    ans = qfactor.optimize(approx_circ, target,  # <--- These are the only required args
+                           diff_tol_a=1e-12,  # Stopping criteria for distance change
+                           diff_tol_r=1e-6,  # Relative criteria for distance change
+                           dist_tol=1e-12,  # Stopping criteria for distance
+                           max_iters=100000,  # Maximum number of iterations
+                           min_iters=1000,  # Minimum number of iterations
+                           slowdown_factor=0)  # Larger numbers slowdown optimization
+
+    if qfactor.get_distance(ans, target) > 1e-6:
+        return False
+
+    return UnivGate(ans[0].utry).on([q1, q2]), UnivGate(ans[1].utry).on([q0, q1])

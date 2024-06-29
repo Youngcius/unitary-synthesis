@@ -1,8 +1,9 @@
 """Two-qubit gate decomposition."""
 
-from math import sqrt, pi
 import numpy as np
+import cirq
 from scipy import linalg
+from math import sqrt, pi
 
 from unisys.basic import gate, Gate, Circuit
 from unisys.basic.circuit import optimize_circuit
@@ -37,7 +38,8 @@ def tensor_product_decompose(g: Gate, return_u3: bool = True) -> Circuit:
     else:
         circ.append(gate.UnivGate(u0, 'U0').on(g.tqs[0]))
         circ.append(gate.UnivGate(u1, 'U1').on(g.tqs[1]))
-    return optimize_circuit(circ)
+    # return optimize_circuit(circ)
+    return circ
 
 
 def abc_decompose(g: Gate, return_u3: bool = True) -> Circuit:
@@ -122,8 +124,77 @@ def kak_decompose(g: Gate, return_u3: bool = True) -> Circuit:
         'An Introduction to Cartan's KAK Decomposition for QC Programmers'
         https://arxiv.org/abs/quant-ph/0507171
     """
+    # ! Since the KAK decomposition implemented bw our own is not robust, we use the Cirq's implementation by default
+    return kak_decompose_cirq(g, return_u3)
+
+
+def kak_decompose_cirq(g: Gate, return_u3: bool = True) -> Circuit:
     if len(g.tqs) != 2 or g.cqs:
         raise ValueError(f'{g} is not an arbitrary 2-qubit gate with designated qubits')
+
+    if is_tensor_prod(g.data):
+        return tensor_product_decompose(g, return_u3)
+    pauli_i = gate.I.data
+    pauli_x = gate.X.data
+    pauli_z = gate.Z.data
+
+    res = cirq.kak_decomposition(g.data)
+    b0 = res.single_qubit_operations_before[0]
+    b1 = res.single_qubit_operations_before[1]
+    a0 = res.single_qubit_operations_after[0]
+    a1 = res.single_qubit_operations_after[1]
+    h1, h2, h3 = [-k for k in res.interaction_coefficients]
+    u0 = 1j / sqrt(2) * (pauli_x + pauli_z) @ linalg.expm(-1j * (h1 - pi / 4) * pauli_x)
+    v0 = -1j / sqrt(2) * (pauli_x + pauli_z)
+    u1 = linalg.expm(-1j * h3 * pauli_z)
+    v1 = linalg.expm(1j * h2 * pauli_z)
+    w = (pauli_i - 1j * pauli_x) / sqrt(2)
+
+    # list of operators
+    rots1 = [b0, u0, v0, a0 @ w]  # rotation gate on idx1
+    rots2 = [b1, u1, v1, a1 @ w.conj().T]
+
+    idx1, idx2 = g.tqs
+    circ = Circuit()
+    if return_u3:
+        circ.append(
+            gate.U3(*params_u3(rots1[0])).on(idx1),
+            gate.U3(*params_u3(rots2[0])).on(idx2),
+            gate.X.on(idx2, idx1),
+            gate.U3(*params_u3(rots1[1])).on(idx1),
+            gate.U3(*params_u3(rots2[1])).on(idx2),
+            gate.X.on(idx2, idx1),
+            gate.U3(*params_u3(rots1[2])).on(idx1),
+            gate.U3(*params_u3(rots2[2])).on(idx2),
+            gate.X.on(idx2, idx1),
+            gate.U3(*params_u3(rots1[3])).on(idx1),
+            gate.U3(*params_u3(rots2[3])).on(idx2)
+        )
+    else:
+        circ.append(
+            gate.UnivGate(rots1[0], 'B0').on(idx1),
+            gate.UnivGate(rots2[0], 'B1').on(idx2),
+            gate.X.on(idx2, idx1),
+            gate.UnivGate(rots1[1], 'U0').on(idx1),
+            gate.UnivGate(rots2[1], 'U1').on(idx2),
+            gate.X.on(idx2, idx1),
+            gate.UnivGate(rots1[2], 'V0').on(idx1),
+            gate.UnivGate(rots2[2], 'V1').on(idx2),
+            gate.X.on(idx2, idx1),
+            gate.UnivGate(rots1[3], 'W0').on(idx1),
+            gate.UnivGate(rots2[3], 'W1').on(idx2)
+        )
+
+    return optimize_circuit(circ)
+
+
+def kak_decompose_own(g: Gate, return_u3: bool = True) -> Circuit:
+    if len(g.tqs) != 2 or g.cqs:
+        raise ValueError(f'{g} is not an arbitrary 2-qubit gate with designated qubits')
+
+    if is_tensor_prod(g.data):
+        return tensor_product_decompose(g, return_u3)
+
     pauli_i = gate.I.data
     pauli_x = gate.X.data
     pauli_z = gate.Z.data
@@ -191,8 +262,19 @@ def can_decompose(g: Gate, return_u3: bool = True) -> Circuit:
     """
     Similar to KAK decomposition, but returning Canonical with single-qubit gates.
     """
+    # ! Since the KAK decomposition implemented bw our own is not robust, we use the Cirq's implementation by default
+    return can_decompose_cirq(g, return_u3)
+
+
+def can_decompose_own(g: Gate, return_u3: bool = True) -> Circuit:
+    """
+    Similar to KAK decomposition, but returning Canonical with single-qubit gates.
+    """
     if len(g.tqs) != 2 or g.cqs:
         raise ValueError(f'{g} is not an arbitrary 2-qubit gate with designated qubits')
+
+    if is_tensor_prod(g.data):
+        return tensor_product_decompose(g, return_u3)
 
     # construct a new matrix replacing U
     u_su4 = M_DAG @ remove_glob_phase(g.data) @ M  # ensure the decomposed object is in SU(4)
@@ -209,6 +291,7 @@ def can_decompose(g: Gate, return_u3: bool = True) -> Circuit:
     k = linalg.inv(A) @ np.angle(np.diag(d))
     # t1, t2, t3 = - k[1:] * 2 / np.pi
     theta1, theta2, theta3 = - k[1:] * 2
+
     circ = Circuit()
     if return_u3:
         circ.append(
@@ -225,6 +308,43 @@ def can_decompose(g: Gate, return_u3: bool = True) -> Circuit:
             gate.UnivGate(b1, 'B1').on(g.tqs[1]),
             # gate.Can(t1, t2, t3).on(g.tqs),
             gate.Can(theta1, theta2, theta3).on(g.tqs),
+            gate.UnivGate(a0, 'A0').on(g.tqs[0]),
+            gate.UnivGate(a1, 'A1').on(g.tqs[1]),
+        )
+
+    return optimize_circuit(circ)
+
+
+def can_decompose_cirq(g: Gate, return_u3: bool = True) -> Circuit:
+    if len(g.tqs) != 2 or g.cqs:
+        raise ValueError(f'{g} is not an arbitrary 2-qubit gate with designated qubits')
+
+    if is_tensor_prod(g.data):
+        return tensor_product_decompose(g, return_u3)
+
+    res = cirq.kak_decomposition(g.data)
+    angles = [- theta * 2 for theta in res.interaction_coefficients]
+    b0 = res.single_qubit_operations_before[0]
+    b1 = res.single_qubit_operations_before[1]
+    a0 = res.single_qubit_operations_after[0]
+    a1 = res.single_qubit_operations_after[1]
+
+    circ = Circuit()
+    if return_u3:
+        circ.append(
+            gate.U3(*params_u3(b0)).on(g.tqs[0]),
+            gate.U3(*params_u3(b1)).on(g.tqs[1]),
+            # gate.Can(t1, t2, t3).on(g.tqs),
+            gate.Can(*angles).on(g.tqs),
+            gate.U3(*params_u3(a0)).on(g.tqs[0]),
+            gate.U3(*params_u3(a1)).on(g.tqs[1]),
+        )
+    else:
+        circ.append(
+            gate.UnivGate(b0, 'B0').on(g.tqs[0]),
+            gate.UnivGate(b1, 'B1').on(g.tqs[1]),
+            # gate.Can(t1, t2, t3).on(g.tqs),
+            gate.Can(*angles).on(g.tqs),
             gate.UnivGate(a0, 'A0').on(g.tqs[0]),
             gate.UnivGate(a1, 'A1').on(g.tqs[1]),
         )

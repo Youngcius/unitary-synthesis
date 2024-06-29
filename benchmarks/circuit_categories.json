@@ -1,0 +1,199 @@
+{
+    "3q_gate": [
+        "peres",
+        "miller",
+        "ccx",
+        "cswap",
+        "ccu"
+    ],
+    "alu": [
+        "alu-v4_37",
+        "alu-v0_26",
+        "alu-v3_35",
+        "alu-v1_29",
+        "alu-v2_32",
+        "alu-v3_34",
+        "alu-v2_31",
+        "alu-v2_30",
+        "alu-v0_27",
+        "alu-v4_36",
+        "alu-v1_28",
+        "alu-v2_33"
+    ],
+    "bit_adder": [
+        "rd73_252",
+        "rd73_140",
+        "rd53_138",
+        "rd53_130",
+        "rd84_142",
+        "rd32-v1_68",
+        "rd53_133",
+        "rd53_311",
+        "rd53_251",
+        "rd32_270",
+        "rd32-v0_66",
+        "rd53_131",
+        "rd84_253",
+        "rd53_135"
+    ],
+    "comparator": [
+        "4gt13_90",
+        "4gt4-v0_78",
+        "4gt12-v0_88",
+        "4gt13-v1_93",
+        "4gt4-v0_73",
+        "4gt12-v1_89",
+        "4gt4-v0_72",
+        "4gt12-v0_87",
+        "4gt5_75",
+        "4gt12-v0_86",
+        "4gt4-v0_80",
+        "4gt11_83",
+        "4gt13_91",
+        "4gt5_77",
+        "4gt11_82",
+        "4gt4-v0_79",
+        "4gt13_92",
+        "4gt4-v1_74",
+        "4gt5_76",
+        "4gt10-v1_81"
+    ],
+    "encoding": [
+        "ham3_102",
+        "decod24-v1_41",
+        "ham15_107",
+        "decod24-v0_38",
+        "decod24-bdd_294",
+        "decod24-enable_126",
+        "decod24-v2_43",
+        "decod24-v3_45",
+        "ham7_104"
+    ],
+    "grover": [
+        "grover_3_4",
+        "grover_5_9",
+        "grover_3_9",
+        "grover_3_1",
+        "grover_4_4",
+        "grover_3_8",
+        "grover_3_2",
+        "grover_5_8",
+        "grover_5_0",
+        "grover_5_2",
+        "grover_5_3",
+        "grover_4_2",
+        "grover_4_9",
+        "grover_5_4",
+        "grover_4_8",
+        "grover_3_7",
+        "grover_5_6",
+        "grover_4_1",
+        "grover_3_0",
+        "grover_3_6",
+        "grover_3_5",
+        "grover_4_7",
+        "grover_4_5",
+        "grover_5_5",
+        "grover_5_1",
+        "grover_4_0",
+        "grover_4_6",
+        "grover_3_3"
+    ],
+    "hwb": [
+        "hwb6_56",
+        "hwb7_62",
+        "hwb5_55",
+        "hwb9_304",
+        "hwb6_301",
+        "hwb5_53",
+        "hwb5_300",
+        "hwb4_52",
+        "hwb4_49",
+        "hwb6_58",
+        "hwb7_302",
+        "hwb8_303"
+    ],
+    "mcx": [
+        "tof_5",
+        "tof_10",
+        "tof_4",
+        "tof_3"
+    ],
+    "modulo": [
+        "4mod5-v0_18",
+        "4mod5-v1_22",
+        "4mod5-bdd_287",
+        "4mod5-v1_24",
+        "4mod5-v0_19",
+        "4mod7-v1_96",
+        "4mod7-v0_94",
+        "4mod5-v0_20",
+        "4mod5-v1_23"
+    ],
+    "mult": [
+        "gf2^4_mult",
+        "gf2^8_mult",
+        "gf2^16_mult"
+    ],
+    "pf": [
+        "pf1_10",
+        "pf4_30",
+        "pf1_30",
+        "pf4_20",
+        "pf4_10",
+        "pf1_20",
+        "pf2_10",
+        "pf2_30",
+        "pf2_20"
+    ],
+    "qaoa": [
+        "qaoa_12",
+        "qaoa_8",
+        "qaoa_16",
+        "qaoa_24"
+    ],
+    "qft": [
+        "qft_32",
+        "qft_8",
+        "qft_16"
+    ],
+    "ripple_adder": [
+        "ripple_adder_30",
+        "ripple_adder_10",
+        "ripple_adder_20"
+    ],
+    "square": [
+        "sqrt8_260",
+        "square_root_7",
+        "squar5_261"
+    ],
+    "sym": [
+        "sym9_146",
+        "sym10_262",
+        "sym9_193",
+        "sym6_145",
+        "sym9_148",
+        "sym6_316"
+    ],
+    "uccsd": [
+        "NH_frz_JW_sto3g",
+        "H2_cmplt_BK_631g",
+        "H2_cmplt_P_631g",
+        "LiH_frz_BK_sto3g",
+        "H4_cmplt_P_sto3g",
+        "H2_cmplt_JW_631g",
+        "LiH_frz_JW_sto3g",
+        "H2O_frz_JW_sto3g",
+        "NH_frz_BK_sto3g",
+        "H4_cmplt_BK_sto3g",
+        "H4_cmplt_JW_sto3g",
+        "LiH_frz_P_sto3g",
+        "H2O_cmplt_JW_sto3g",
+        "NH_frz_P_sto3g"
+    ],
+    "urf": [
+        "urf1_278",
+        "urf2_277",
+        "urf5_280"
+    ]
+}

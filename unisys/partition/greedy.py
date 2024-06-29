@@ -7,8 +7,8 @@ from functools import reduce
 from operator import add
 from typing import List, Set, Union
 from unisys.basic.circuit import Circuit
-from unisys.utils.passes import dag_to_layers
-from unisys.partition.utils import block_score, contract_1q_gates_on_dag
+from unisys.utils.passes import dag_to_layers, contract_1q_gates_on_dag
+from unisys.partition.utils import block_score
 
 from rich.console import Console
 
@@ -39,9 +39,9 @@ def greedy_partition(circ: Circuit, grain: int = 2) -> List[Circuit]:
     epoch = 0
     while block_candidates := [block for block in dag.nodes if not dag.nodes[block]['resolved']]:
         epoch += 1
-        print()
-        console.print('EPOCH {} new searching epoch (num_candidates: {})'.format(epoch, len(block_candidates)))
-        console.print('RESOLVED attributes: {}'.format(Counter(nx.get_node_attributes(dag, 'resolved').values())))
+        # print()
+        # console.print('EPOCH {} new searching epoch (num_candidates: {})'.format(epoch, len(block_candidates)))
+        # console.print('RESOLVED attributes: {}'.format(Counter(nx.get_node_attributes(dag, 'resolved').values())))
         blocks_extended = []
         for block in block_candidates:
             block_ = extend_block_over_dag(block, dag, grain)
@@ -49,7 +49,7 @@ def greedy_partition(circ: Circuit, grain: int = 2) -> List[Circuit]:
 
         scores = [block_score(block_) for block_ in blocks_extended]
 
-        console.print('scores: {}'.format(scores))
+        # console.print('scores: {}'.format(scores))
 
         max_score = max(scores)
         involved_blocks = set()
@@ -66,9 +66,9 @@ def greedy_partition(circ: Circuit, grain: int = 2) -> List[Circuit]:
 
             nodes_to_contract = [node for node in block_ if node != block]  # block_ 目前类型为 List[Circuit] 用意是获取需要缩并的节点
             new_block = reduce(add, block_)
-            console.print('nodes_to_contract: (num = {})'.format(len(nodes_to_contract)), style='bold green')
-            console.print('new resolved block {} with qubits {}'.format(new_block, new_block.qubits),
-                          style='bold green')
+            # console.print('nodes_to_contract: (num = {})'.format(len(nodes_to_contract)), style='bold green')
+            # console.print('new resolved block {} with qubits {}'.format(new_block, new_block.qubits),
+            #               style='bold green')
             # print(new_block.to_cirq())
 
             dag = nx.relabel_nodes(dag, {block: new_block})

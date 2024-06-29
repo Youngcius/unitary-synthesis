@@ -12,30 +12,33 @@ from functools import reduce
 from operator import add
 from typing import List, Tuple, Dict
 from copy import deepcopy, copy
-from datetime import datetime
 from collections import Counter
-import pydot
-from IPython.display import Image
 
 from unisys.basic import gate
 from unisys.basic.gate import Gate
 from unisys.utils.operations import tensor_slots, controlled_unitary_matrix, is_equiv_unitary
 from unisys.utils.functions import limit_angle
+from unisys.utils.graphs import draw_circ_dag_mpl, draw_circ_dag_graphviz
 
 
 class Circuit(list):
     def __init__(self, gates: List[Gate] = None):
         if gates is not None:
-            assert all([g.qregs for g in gates]), "Each gate should act on at specific qubit(s)"
+            assert all([g.qregs for g in gates]), "Each gate should act on specific qubit(s)"
         super().__init__(gates if gates else [])
 
     def __hash__(self):
         return hash(id(self))
 
     def append(self, *gates):
-        assert all([g.qregs for g in gates]), "Each gate should act on at specific qubit(s)"
+        assert all([g.qregs for g in gates]), "Each gate should act on specific qubit(s)"
         for g in gates:
             super().append(g)
+
+    def prepend(self, *gates):
+        assert all([g.qregs for g in gates]), "Each gate should act on specific qubit(s)"
+        for g in reversed(gates):
+            super().insert(0, g)
 
     def deepclone(self):
         """Deep duplicate"""
@@ -49,8 +52,7 @@ class Circuit(list):
         return Circuit(deepcopy(self.gates) + deepcopy(other.gates))
 
     def __repr__(self):
-        return 'Circuit(num_gates: {}, num_qubits: {}, with_measure: {})'.format(self.num_gates, self.num_qubits,
-                                                                                 self.with_measure)
+        return 'Circuit(num_gates: {}, num_qubits: {})'.format(self.num_gates, self.num_qubits)
 
     def to_qiskit(self):
         """Convert to qiskit.QuantumCircuit instance"""
@@ -308,11 +310,11 @@ class Circuit(list):
         layers = list(map(_sort_gates_on_qreg, layers))
         return layers
 
+
     def to_dag(self) -> nx.DiGraph:
         """Convert a circuit into a Directed Acyclic Graph (DAG) according to dependency of each gate's qubits"""
         all_gates = self.gates
         dag = nx.DiGraph()
-        # dag.add_nodes_from(range(self.num_gates))
         dag.add_nodes_from(all_gates)
         while all_gates:
             g = all_gates.pop(0)
@@ -320,83 +322,24 @@ class Circuit(list):
             for g_opt in all_gates:  # traverse the subsequent optional gates
                 qregs_opt = set(g_opt.qregs)
                 if qregs_opt & qregs:
-                    # dag.add_edge(self.index(g), self.index(g_opt))
                     dag.add_edge(g, g_opt)
                     qregs -= qregs_opt
                 if not qregs:
                     break
         return dag
 
-    def draw_circ_dag(self, fname: str = None) -> Image:
-        dag = self.to_dag()
-        dot = pydot.Dot(graph_type='digraph')
-        gate_to_node = {}
-        colors = {1: 'white', 2: 'lightblue', 3: 'lightgreen', 4: 'lightpink',
-                  5: 'lightyellow', 6: 'lightgray', 7: 'lightcyan', 8: 'lightcoral'}
-        for g in dag.nodes:
-            node = pydot.Node(hash(g), label=str(g), fillcolor=colors[g.num_qregs], style='filled')
-            gate_to_node[g] = node
-            dot.add_node(node)
-        for edge in dag.edges:
-            dot.add_edge(pydot.Edge(gate_to_node[edge[0]], gate_to_node[edge[1]]))
-        dot.set_rankdir('LR')
-        if fname:
-            dot.write_png(fname)
-        return Image(dot.create_png())
+    def draw_circ_dag_mpl(self, fname: str = None, figsize=None, fix_layout=False):
+        return draw_circ_dag_mpl(self.to_dag(), fname, figsize, fix_layout)
 
-    def to_dag_forward(self) -> nx.DiGraph:
-        """
-        Convert a circuit into a Directed Acyclic Graph (DAG) by forward traversing the circuit.
-        ---
-        NOTE: In comparison with the method `to_dag`, the DAG generated from this method is more compact
-        """
-        all_gates = self.gates
-        dag = nx.DiGraph()
-        dag.add_nodes_from(all_gates)
-        while all_gates:
-            gate_front = all_gates.pop(0)
-            qreg_front = set(gate_front.qregs)
-            union_set = set()
-            for gate_back in all_gates:
-                # judge if there is dependent relation about qubit(s) acted
-                qreg_back = set(gate_back.qregs)
-                if len(qreg_back & qreg_front) > 0 and len(qreg_back & union_set) == 0:
-                    # dag.add_edge(self.index(gate_front), self.index(gate_back))
-                    dag.add_edge(gate_front, gate_back)
-                    union_set = union_set | qreg_back
-        return dag
-
-    def to_dag_backward(self) -> nx.DiGraph:
-        """
-        Convert a circuit into a Directed Acyclic Graph (DAG) by backward traversing the circuit.
-        ---
-        NOTE: In comparison with the method `to_dag`, the DAG generated from this method is more compact
-        """
-        all_gates = self.gates
-        dag = nx.DiGraph()
-        dag.add_nodes_from(all_gates)
-        while all_gates:
-            gate_back = all_gates.pop()
-            # idx_back = len(all_gates)
-            qreg_back = set(gate_back.qregs)
-            union_set = set()
-            # for idx_front in range(idx_back - 1, -1, -1):
-            for gate_front in reversed(all_gates):
-                # gate_front = self[idx_front]
-                # judge if there is dependent relation about qubit(s) acted
-                qreg_front = set(gate_front.qregs)
-                if len(qreg_front & qreg_back) > 0 and len(qreg_front & union_set) == 0:
-                    # dag.add_edge(idx_front, idx_back)
-                    dag.add_edge(gate_front, gate_back)
-                    union_set = union_set | qreg_front
-        return dag
+    def draw_circ_dag_graphviz(self, fname: str = None):
+        return draw_circ_dag_graphviz(self.to_dag(), fname)
 
     def gate_stats(self) -> Dict[str, int]:
         """Statistics of gate names and occurring number in the circuit"""
         return dict(sorted(Counter([g.name for g in self.gates]).items()))
 
     @property
-    def gates(self, with_measure: bool = True):
+    def gates(self, with_measure: bool = True) -> List[Gate]:
         if with_measure:
             return [g for g in self]
         return [g for g in self if not isinstance(g, gate.Measurement)]
@@ -421,7 +364,7 @@ class Circuit(list):
         return len([l for l in layers if Circuit(l).num_nonlocal_gates > 0])
 
     @property
-    def qubits(self):
+    def qubits(self) -> List[int]:
         """qubits indices in the quantum circuit"""
         idx = []
         for g in self:
@@ -464,6 +407,7 @@ class QASMStringIO(io.StringIO):
     #     n_content = super().write(__s)
     #     n_tail = super().write(';\n')
     #     return n_content + n_tail
+    
     def write_qregs(self, n: int) -> int:
         """
         Write quantum register declarations into the string stream.
@@ -505,13 +449,14 @@ class QASMStringIO(io.StringIO):
         """
         Write the QASM text file header
         """
-        n1 = super().write('// Author: zhy\n')
-        n2 = super().write('// Time: {}\n'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-        n3 = self.write_line_gap()
+        # n1 = super().write('// Author: zhy\n')
+        # n2 = super().write('// Time: {}\n'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        # n3 = self.write_line_gap()
         n4 = super().write('OPENQASM 2.0;\n')
         n5 = super().write('include "qelib1.inc";\n')
         n6 = self.write_line_gap(2)
-        return n1 + n2 + n3 + n4 + n5 + n6
+        # return n1 + n2 + n3 + n4 + n5 + n6
+        return n4 + n5 + n6
 
 
 def parse_to_tuples(circuit: Circuit) -> List[Tuple[str, List[int]]]:

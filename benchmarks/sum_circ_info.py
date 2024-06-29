@@ -3,10 +3,12 @@ Summarize circuit information (e.g., # qubits, # gates, depth, etc.) of all benc
 """
 import os
 import yaml
+import json
 import numpy as np
 import pandas as pd
 from qiskit import QuantumCircuit
 from qiskit.converters import circuit_to_dag
+from natsort import natsorted
 from rich.console import Console
 from collections import Counter
 import warnings
@@ -16,14 +18,26 @@ warnings.filterwarnings('ignore')
 console = Console()
 
 benchmark_dpath = '.'
-with open(os.path.join(benchmark_dpath, 'config.yaml'), 'r') as f:
-    config = yaml.safe_load(f)
 
+
+circuit_categories = {}
 fnames = []
-for dpath in config['circ_dpaths']:
-    dpath = os.path.join(benchmark_dpath, dpath)
-    fnames.extend([os.path.join(dpath, fname) for fname in os.listdir(dpath)])
 
+for root, dirs, files in natsorted(os.walk(benchmark_dpath)):
+    for file in files:
+        if file.endswith('.qasm'):
+            category = root.split('/')[-1]
+            if category not in circuit_categories:
+                circuit_categories[category] = []
+            circ_name = file.split('.')[0]
+            circuit_categories[category].append(circ_name)
+            fnames.append(os.path.join(root, file))
+
+
+
+
+with open('circuit_categories.json', 'w') as f:
+    json.dump(circuit_categories, f, indent=4)
 
 description = pd.DataFrame(columns=['circ_name', 'num_qubits', 'num_gates', 'num_2q_gates', 'depth'])
 
@@ -40,7 +54,7 @@ for i, fname in enumerate(fnames):
     num_gates_count = dict(sorted(num_gates_count.items()))
 
     console.rule(circ_name)
-    console.print(gate_names_count)
+    console.print('gate set status: {}'.format(gate_names_count))
     console.print('gate weight stats: {}'.format(num_gates_count))
 
     all_gate_names += list(gate_names_count.keys())
@@ -57,7 +71,7 @@ for i, fname in enumerate(fnames):
         'num_qubits': qc.num_qubits,
         'num_gates': qc.size(),
         'num_2q_gates': qc.num_nonlocal_gates(),
-        'depth': qc.depth()
+        'depth': qc.depth(),
     }, index=[0])], ignore_index=True)
 
 

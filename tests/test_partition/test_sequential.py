@@ -4,8 +4,7 @@ from unisys import Circuit
 from functools import reduce
 from operator import add
 from tqdm import tqdm
-
-from unisys.partition.greedy import greedy_partition
+from unisys.partition.sequential import sequential_partition
 
 benchmark_dpath = '../../benchmarks'
 fnames = []
@@ -19,7 +18,7 @@ num_qubits_skip = 8
 grain = 2
 
 
-def test_greedy_partition():
+def test_sequential_partition():
     for fname in tqdm(fnames):
 
         circ = Circuit.from_qasm(fname=fname)
@@ -27,7 +26,7 @@ def test_greedy_partition():
         if circ.num_gates > num_gates_skip or circ.num_qubits > num_qubits_skip:
             continue
 
-        blocks = greedy_partition(circ, grain)
+        blocks = sequential_partition(circ, grain)
 
         circ_merged = reduce(add, blocks)
         cirq.testing.assert_allclose_up_to_global_phase(

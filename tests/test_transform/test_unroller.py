@@ -17,9 +17,9 @@ def test_unroll_su4_to_cnot():
         gate.X.on(0, 3)
     ])
 
-    blocks = partition.quick_partition(circ, grain=2)
-    fused = transform.fuse_blocks(blocks)
-    circ_unrolled = transform.unroll_su4(fused, by='cnot')
+    blocks = partition.greedy_partition(circ, grain=2)
+    fused = transform.fuser.fuse_blocks(blocks)
+    circ_unrolled = transform.unroller.unroll_su4(fused, by='cnot')
     cirq.testing.assert_allclose_up_to_global_phase(
         circ_unrolled.unitary(),
         circ.unitary(),
@@ -41,9 +41,9 @@ def test_unroll_su4_to_can():
         gate.X.on(0, 3)
     ])
 
-    blocks = partition.quick_partition(circ, grain=2)
-    fused = transform.fuse_blocks(blocks)
-    circ_unrolled = transform.unroll_su4(fused, by='can')
+    blocks = partition.greedy_partition(circ, grain=2)
+    fused = transform.fuser.fuse_blocks(blocks)
+    circ_unrolled = transform.unroller.unroll_su4(fused, by='can')
     cirq.testing.assert_allclose_up_to_global_phase(
         circ_unrolled.unitary(),
         circ.unitary(),

@@ -1,6 +1,5 @@
 from unisys.utils.arch import gene_random_circuit
 from unisys import gate, Circuit
-import qiskit
 import cirq
 
 
@@ -16,14 +15,27 @@ def test_dump_load():
     )
 
 
+# def test_qasm_by_qiskit():
+#     from qiskit_aer import UnitarySimulator
+#     circ = gene_random_circuit(4, depth=100)
+#     circ_qiskit = circ.to_qiskit().reverse_bits()
+#     backend = UnitarySimulator()
+#     job = qiskit.execute(circ_qiskit, backend)
+#     result = job.result()
+#     unitary = result.get_unitary().to_matrix()
+#     cirq.testing.assert_allclose_up_to_global_phase(
+#         circ.unitary(),
+#         unitary,
+#         atol=1e-7
+#     )
+
+
 def test_qasm_by_qiskit():
-    from qiskit_aer import UnitarySimulator
+    from qiskit.quantum_info import Operator
     circ = gene_random_circuit(4, depth=100)
     circ_qiskit = circ.to_qiskit().reverse_bits()
-    backend = UnitarySimulator()
-    job = qiskit.execute(circ_qiskit, backend)
-    result = job.result()
-    unitary = result.get_unitary().to_matrix()
+    # unitary = result.get_unitary().to_matrix()
+    unitary = Operator(circ_qiskit).to_matrix()
     cirq.testing.assert_allclose_up_to_global_phase(
         circ.unitary(),
         unitary,

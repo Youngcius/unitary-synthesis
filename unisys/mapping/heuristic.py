@@ -10,10 +10,9 @@ from networkx import Graph
 from numpy import ndarray
 from unisys import Gate, Circuit
 from unisys.basic.gate import SWAPGate
-from unisys.utils.arch import gene_init_mapping, is_executable, update_mapping
-from unisys.utils.arch import unify_mapped_circuit
+from unisys.utils.arch import gene_init_mapping, is_executable, update_mapping, unify_mapped_circuit
+from unisys.utils.arch import obtain_logical_neighbors
 from unisys.utils.passes import obtain_front_layer
-
 from rich.console import Console
 
 console = Console()
@@ -52,8 +51,7 @@ def sabre_search(circ: Circuit, device: Graph, num_pass_periods: int = 3) -> Tup
 
 
 def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, int] = None,
-                          return_circ_with_swaps: bool = False, gene_init_mapping_type: str = 'random') -> Tuple[
-    Circuit, Dict[int, int], Dict[int, int]]:
+                          return_circ_with_swaps: bool = False, gene_init_mapping_type: str = 'random') -> Tuple[Circuit, Dict[int, int], Dict[int, int]]:
     """
     One pass of SABRE heuristic searching algorithm to generate mapping information for a given circuit and device.
 
@@ -110,7 +108,6 @@ def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, 
                 # dag.remove_node(circ.index(g))
                 dag.remove_node(g)
                 circ_with_swaps.append(g)
-            # front_layer = obtain_front_layer(dag, circ)
             front_layer = obtain_front_layer(dag)
         else:  # find suitable SWAP gates
             # reset decay_params each 5 rounds
@@ -123,7 +120,7 @@ def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, 
             swap_candidates = obtain_swap_candidates(front_layer, mapping, device)
             # console.print('Swap candidates: {}'.format(swap_candidates))
             for swap in swap_candidates:
-                scores[swap] = heuristic_score(front_layer, dag, circ, mapping, swap, dist_mat, decay_params)
+                scores[swap] = heuristic_score(front_layer, dag, mapping, swap, dist_mat, decay_params)
 
             # find the SWAP with minimal score
             swap = swap_candidates[np.argmin(list(scores.values()))]
@@ -142,25 +139,6 @@ def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, 
     return unify_mapped_circuit(circ_with_swaps, mappings), mappings[0], mappings[-1]
 
 
-# def obtain_front_layer(dag: nx.MultiDiGraph, circ: Circuit) -> List[Gate]:
-#     """Obtain front layer (with in_degree == 0) of the DAG"""
-#     front_layer = []
-#     for node in dag.nodes:
-#         if dag.in_degree(node) == 0:
-#             front_layer.append(circ[node])
-#     return front_layer
-
-
-def obtain_logical_neighbors(qubit: int, mapping: Dict[int, int], device: Graph) -> List[int]:
-    """Obtain logical neighbors of a logical qubit according to the logical-physical mapping and device connectivity"""
-    # print(qubit, mapping[qubit])
-    physical_neighbors = device.neighbors(mapping[qubit])
-    inverse_mapping = {v: k for k, v in mapping.items()}
-    # NOTE: physical neighbors may not exist in the mapping because num_device_qubits >=  num_logical_qubits
-    logical_neighbors = [inverse_mapping[q] for q in physical_neighbors if q in inverse_mapping]
-    return logical_neighbors
-
-
 def obtain_swap_candidates(gates: List[Gate], mapping: Dict[int, int], device: Graph) -> List[SWAPGate]:
     """Obtain SWAP candidates whose involved qubits must occur in involved qubits of gates"""
     swap_candidates = []
@@ -171,7 +149,7 @@ def obtain_swap_candidates(gates: List[Gate], mapping: Dict[int, int], device: G
     return swap_candidates
 
 
-def heuristic_score(front_layer: List[Gate], dag: nx.MultiDiGraph, circ: Circuit, mapping: Dict[int, int],
+def heuristic_score(front_layer: List[Gate], dag: nx.DiGraph, mapping: Dict[int, int],
                     swap: SWAPGate, dist_mat: ndarray, decay_params: Dict[int, float]) -> float:
     """
     Effect of decay parameter: 
@@ -180,11 +158,9 @@ def heuristic_score(front_layer: List[Gate], dag: nx.MultiDiGraph, circ: Circuit
     succeeding_layer = set()
     succeeding_weight = 0.5
     for g in front_layer:
-        # for successor in dag.successors(circ.index(g)):
         for successor in dag.successors(g):
             # print('{} --> {}'.format(g, circ[successor]))
             if len(succeeding_layer) < 20:
-                # succeeding_layer.add(circ[successor])
                 succeeding_layer.add(successor)
     succeeding_layer = list(succeeding_layer)
     mapping = update_mapping(mapping, swap)  # update mapping after an acted SWAP gate
@@ -203,6 +179,7 @@ def heuristic_score(front_layer: List[Gate], dag: nx.MultiDiGraph, circ: Circuit
     #       max(decay_params[swap.tqs[0]], decay_params[swap.tqs[1]]) * (s1 + succeeding_weight * s2))
     # print('decay_params:', decay_params)
     return max(decay_params[swap.tqs[0]], decay_params[swap.tqs[1]]) * (s1 + succeeding_weight * s2)
+
 
 def _has_decomposed_completely(circ: Circuit):
     """

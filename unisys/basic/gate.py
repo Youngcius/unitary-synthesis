@@ -97,9 +97,14 @@ class Gate:
             [str(tq) for tq in self._targ_qubits])
         cqs_str = str(self._ctrl_qubits[0]) if len(self._ctrl_qubits) == 1 else '|'.join(
             [str(cq) for cq in self._ctrl_qubits])
+        g_name = self.name
+        if g_name == 'SDG':
+            g_name = 'S^\dagger'
+        if g_name == 'TDG':
+            g_name = 'T^\dagger'
         if not self._ctrl_qubits:
-            return '${}_{{{}}}$'.format(self.name, tqs_str)
-        return '${}_{{{}←{}}}$'.format(self.name, tqs_str, cqs_str)
+            return '${}_{{{}}}$'.format(g_name, tqs_str)
+        return '${}_{{{}←{}}}$'.format(g_name, tqs_str, cqs_str)
 
     @property
     def tq(self):
@@ -153,6 +158,8 @@ class Gate:
             g.name = s_names[(idx + 1) % 2]
         elif g.name.endswith('†'):
             g.name = g.name[:-1]
+        elif g.name in ROTATION_GATES:
+            raise NotImplementedError
         elif np.allclose(g.data, self.data):
             pass
         else:
@@ -337,6 +344,25 @@ class RZZ(Gate):
         super().__init__(linalg.expm(-1j * theta / 2 * np.kron(Z.data, Z.data)), name='RZZ', angle=theta, *args,
                          **kwargs)
 
+def exp_xx(theta):
+    return linalg.expm(-1j * theta / 2 * np.kron(X.data, X.data))
+def exp_yy(theta):
+    return linalg.expm(-1j * theta / 2 * np.kron(Y.data, Y.data))
+def exp_zz(theta):
+    return linalg.expm(-1j * theta / 2 * np.kron(Z.data, Z.data))
+def exp_xy(theta):
+    return linalg.expm(-1j * theta / 2 * np.kron(X.data, Y.data))
+def exp_yx(theta):
+    return linalg.expm(-1j * theta / 2 * np.kron(Y.data, X.data))
+def exp_xz(theta):
+    return linalg.expm(-1j * theta / 2 * np.kron(X.data, Z.data))
+def exp_zx(theta):
+    return linalg.expm(-1j * theta / 2 * np.kron(Z.data, X.data))
+def exp_yz(theta):
+    return linalg.expm(-1j * theta / 2 * np.kron(Y.data, Z.data))
+def exp_zy(theta):
+    return linalg.expm(-1j * theta / 2 * np.kron(Z.data, Y.data))
+
 
 class WeylGate(Gate):
     r"""
@@ -356,11 +382,6 @@ class WeylGate(Gate):
                                                 theta2 * np.kron(Y.data, Y.data) +
                                                 theta3 * np.kron(Z.data, Z.data))),
                          name='Can', angles=(theta1, theta2, theta3), *args, **kwargs)
-    # def __init__(self, t1, t2, t3, *args, **kwargs):
-    #     super().__init__(linalg.expm(-1j * pi / 2 * (t1 * np.kron(X.data, X.data) +
-    #                                                  t2 * np.kron(Y.data, Y.data) +
-    #                                                  t3 * np.kron(Z.data, Z.data))),
-    #                      name='Can', params=(t1, t2, t3), *args, **kwargs)
 
 
 # Non-operation Gate
@@ -389,6 +410,7 @@ ISWAP = ISWAPGate()
 
 Can = WeylGate  # its alias: Canonical gate
 
+PAULI_ROTATION_GATES = ['rx', 'ry', 'rz', 'rxx', 'ryy', 'rzz']
 ROTATION_GATES = ['rx', 'ry', 'rz', 'u1', 'u2' 'u3', 'rxx', 'ryy', 'rzz', 'can']
 FIXED_GATES = ['x', 'y', 'z', 'i', 'id', 'h', 's', 't', 'sdg', 'tdg', 'cx', 'cz', 'swap', 'ch']
 CONTROLLABLE_GATES = ['x', 'y', 'z', 'h', 'swap', 'rx', 'ry', 'rz', 'u3']
