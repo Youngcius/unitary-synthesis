@@ -18,8 +18,10 @@ from rich.console import Console
 console = Console()
 
 
-def sabre_search(circ: Circuit, device: Graph, num_pass_periods: int = 3) -> Tuple[
-    Circuit, Dict[int, int], Dict[int, int]]:
+def sabre_search(circ: Circuit, device: Graph, 
+                 num_pass_periods: int = 3,
+                 init_mapping: Dict[int, int] = None,
+                 gene_init_mapping_type = 'trivial') -> Tuple[Circuit, Dict[int, int], Dict[int, int]]:
     """
     SABRE heuristic searching algorithm to generate mapping information for a given circuit and device.
 
@@ -33,8 +35,11 @@ def sabre_search(circ: Circuit, device: Graph, num_pass_periods: int = 3) -> Tup
         Initial mapping from logical to physical qubits
         Final mapping from logical to physical qubits
     """
-    mapped_circ, init_mapping, final_mapping = sabre_search_one_pass(circ, device)
+    mapped_circ, init_mapping, final_mapping = sabre_search_one_pass(circ, device, init_mapping=init_mapping,
+                                                                     gene_init_mapping_type=gene_init_mapping_type)
     circ_inv = circ.inverse()
+
+    last_init_mapping, last_final_mapping = init_mapping, final_mapping
 
     for i in range(num_pass_periods):
         console.rule('SABRE bidirectional pass period {}'.format(i))
@@ -47,11 +52,16 @@ def sabre_search(circ: Circuit, device: Graph, num_pass_periods: int = 3) -> Tup
         init_mapping = final_mapping
         mapped_circ, init_mapping, final_mapping = sabre_search_one_pass(circ, device, init_mapping)
 
+        if init_mapping == last_init_mapping and final_mapping == last_final_mapping:
+            console.print('Bidirectional mapping converged!', style='bold red')
+            break
+        last_init_mapping, last_final_mapping = init_mapping, final_mapping
+
     return mapped_circ, init_mapping, final_mapping
 
 
 def sabre_search_one_pass(circ: Circuit, device: Graph, init_mapping: Dict[int, int] = None,
-                          return_circ_with_swaps: bool = False, gene_init_mapping_type: str = 'random') -> Tuple[Circuit, Dict[int, int], Dict[int, int]]:
+                          return_circ_with_swaps: bool = False, gene_init_mapping_type: str = 'trivial') -> Tuple[Circuit, Dict[int, int], Dict[int, int]]:
     """
     One pass of SABRE heuristic searching algorithm to generate mapping information for a given circuit and device.
 

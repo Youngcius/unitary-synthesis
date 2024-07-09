@@ -98,11 +98,12 @@ def unify_mapped_circuit(circ_with_swaps: Circuit, mappings: List[Dict[int, int]
     for g in circ_with_swaps:
         if isinstance(g, SWAPGate):
             # NOTE: there must be len(mappings) == len(swaps) + 1
-            mapped_circ.append(
-                gate.X.on(mapping[g.tqs[0]], mapping[g.tqs[1]]),
-                gate.X.on(mapping[g.tqs[1]], mapping[g.tqs[0]]),
-                gate.X.on(mapping[g.tqs[0]], mapping[g.tqs[1]]),
-            )
+            # mapped_circ.append(
+            #     gate.X.on(mapping[g.tqs[0]], mapping[g.tqs[1]]),
+            #     gate.X.on(mapping[g.tqs[1]], mapping[g.tqs[0]]),
+            #     gate.X.on(mapping[g.tqs[0]], mapping[g.tqs[1]]),
+            # )
+            mapped_circ.append(gate.SWAP.on([mapping[g.tqs[0]], mapping[g.tqs[1]]]))
             mapping_idx += 1
             mapping = mappings[mapping_idx]
         elif len(g.qregs) == 1:
