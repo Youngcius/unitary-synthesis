@@ -11,7 +11,7 @@
 **Qubit mapping and routing:**
 
 *E.g.*:
-![](./images/mapping-demo.jpeg)
+![](./images/mapping-demo.png)
 
 - Exact algorithms
   - ...
